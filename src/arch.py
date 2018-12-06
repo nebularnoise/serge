@@ -11,7 +11,7 @@ class VariationnalAutoEncoder(nn.Module):
         Parameters
         ----------
         determinist_encoder: True / False
-            Defines weither the encoding pass is determinist or stochasticself.
+            Defines weither the encoding pass is determinist or stochastic.
             Default is False
         z_dim: int
             Defines the dimension of the latent spaceself.
