@@ -4,12 +4,17 @@ import torch.functional as F
 
 
 class VariationnalAutoEncoder(nn.Module):
-    def __init__(self, determinist_encoder=False):
+    def __init__(self, determinist_encoder=False, z_dim=32):
         """Defines the inner layers of a variationnal auto encoderself.
 
         Parameters
         ----------
-
+        determinist_encoder: True / False
+            Defines wether the encoding pass is determinist or stochasticself.
+            Default is False
+        z_dim: int
+            Defines the dimension of the latent spaceself.
+            Default is 32
 
         """
         super(VariationnalAutoEncoder,self).__init__()
@@ -21,7 +26,7 @@ class VariationnalAutoEncoder(nn.Module):
         self.enc_dim = [1,128,256,7*7*256,1024,128]
         self.dec_dim = [128,1024,7*7*256,256,128,1,1]
 
-        self.z_dim = 32
+        self.z_dim = z_dim
 
         #-----------------DEFINITION OF THE ENCODER-----------------------------
 
@@ -41,14 +46,11 @@ class VariationnalAutoEncoder(nn.Module):
         self.enc4s = nn.Sequential(nn.BatchNorm1d(self.enc_dim[5]),\
                                self.act)
 
-        if self.determinist_encoder:
-            self.enc5 = nn.Linear(self.enc_dim[5],z_dim)
-        else:
-            self.logvar = nn.Linear(self.enc_dim[5],self.z_dim)
-            self.mu    = nn.Linear(self.enc_dim[5], self.z_dim)
+        self.logvar = nn.Linear(self.enc_dim[5],self.z_dim)
+        self.mu    = nn.Linear(self.enc_dim[5], self.z_dim)
 
         #-----------------DEFINITION OF THE DECODER-----------------------------
-        
+
         self.dec1  = nn.Linear(self.z_dim,self.dec_dim[0])
         self.dec1s = nn.Sequential(nn.BatchNorm1d(self.dec_dim[0]),\
                                self.act)
@@ -77,15 +79,29 @@ class VariationnalAutoEncoder(nn.Module):
                                nn.Sigmoid())
 
     def encode(self,x):
+        """Encode pass of the auto encoder.
+
+        Parameters
+        ----------
+        x: Tensor
+            Batch / Minibatch
+
+        Returns
+        -------
+        z if determinist: Tensor
+            Latent projection of x
+        (logvar,mu) if stochastic: (Tensor,Tensor)
+            Latent stochastic projection of x
+        """
         x = x.unsqueeze(1)
-        #ENCODE
         x = self.enc1s(self.enc1(x))
         x = self.enc2s(self.enc2(x))
         x = x.view(-1,self.num_flat_features(x))
         x = self.enc3s(self.enc3(x))
         x = self.enc4s(self.enc4(x))
+
         if self.determinist_encoder:
-            z = self.enc_5(x)
+            z = self.mu(x)
             return z
         else:
             logvar = self.logvar(x)
@@ -93,10 +109,33 @@ class VariationnalAutoEncoder(nn.Module):
             return logvar,mu
 
     def sample(self,logvar,mu):
+        """Sample from a Gaussian distribution
+
+        Parameters
+        ----------
+        logvar: Tensor
+            log-Variance of the distribution
+        mean: Tensor
+            mean of the distribution
+
+        Returns
+        -------
+        z: Samples from the Gaussian distribution N(mu,logvar)
+        """
         return mu + torch.randn_like(mu)*torch.exp(.5*logvar)
 
     def decode(self,x):
-        #DECODE
+        """Decode pass of the auto encoder.
+
+        Parameters
+        ----------
+        x: Tensor
+            Samples of the latent space to be decoded
+
+        Returns
+        -------
+        Reconstruction of x.
+        """
         x = self.dec1s(self.dec1(x))
         x = self.dec2s(self.dec2(x))
         x = self.dec3s(self.dec3(x))
@@ -106,13 +145,18 @@ class VariationnalAutoEncoder(nn.Module):
         x = self.dec6s(self.dec6(x))
         return x
 
-    def forward(self,x):
-        logvar,mu = self.encode(x)
-        z         = self.sample(logvar,mu)
-        y         = self.decode(z)
-        return y
-
     def num_flat_features(self,x):
+        """Flattening x for every samples of a batch
+
+        Parameters
+        ----------
+        x: Tensor
+            Tensor to be flattened
+
+        Returns
+        -------
+        The flattened version of x.
+        """
         size = x.size()[1:]
         num  = 1
         for s in size:
@@ -120,4 +164,4 @@ class VariationnalAutoEncoder(nn.Module):
         return num
 
 if __name__ == "__main__":
-    model = VariationnalAutoEncoder()
+    model = VariationnalAutoEncoder(determinist_encoder=True,z_dim=32)
