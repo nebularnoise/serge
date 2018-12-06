@@ -4,7 +4,8 @@ import torch.functional as F
 
 
 class VariationnalAutoEncoder(nn.Module):
-    def __init__(self, determinist_encoder=False, z_dim=32):
+    def __init__(self, determinist_encoder=False, z_dim=32,
+                enc_dim=None, dec_dim=None):
         """Defines the inner layers of a variationnal auto encoderself.
 
         Parameters
@@ -23,8 +24,15 @@ class VariationnalAutoEncoder(nn.Module):
 
         self.act   = nn.LeakyReLU()
 
-        self.enc_dim = [1,128,256,7*7*256,1024,128]
-        self.dec_dim = [128,1024,7*7*256,256,128,1,1]
+        if enc_dim is None:
+            self.enc_dim = [1,128,256,7*7*256,1024,128]
+        else:
+            self.enc_dim = enc_dim
+
+        if dec_dim is None:
+            self.dec_dim = [128,1024,7*7*256,256,128,1,1]
+        else:
+            self.dec_dim = dec_dim
 
         self.z_dim = z_dim
 
