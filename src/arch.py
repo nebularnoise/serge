@@ -1,23 +1,24 @@
 import torch
 import torch.nn as nn
-import torch.functionnal as F
+import torch.functional as F
 
 
 class VariationnalAutoEncoder(nn.Module):
-    """Defines the architecure composing a Variationnal Auto-Encoder
-
-    Parameters
-    ----------
-
-
-    """
     def __init__(self):
-        super(AE,self).__init__()
+        """Defines the inner layers of a variationnal auto encoderself.
+
+        Parameters
+        ----------
+
+
+        """
+        super(VariationnalAutoEncoder,self).__init__()
 
         self.act   = nn.LeakyReLU()
         self.tanh  = nn.Tanh()
 
         self.enc_dim = [1,128,256,7*7*256,1024,128]
+        self.dec_dim = [128,1024,7*7*256,256,128,1,1]
 
         self.z_dim = 32
 
@@ -29,39 +30,42 @@ class VariationnalAutoEncoder(nn.Module):
         self.enc2s = nn.Sequential(nn.BatchNorm2d(self.enc_dim[2]),\
                                self.act)
 
-        self.enc3  = nn.Linear(7*7*256,1024)
-        self.enc3s = nn.Sequential(nn.BatchNorm1d(1024),\
+        self.enc3  = nn.Linear(self.enc_dim[3],self.enc_dim[4])
+        self.enc3s = nn.Sequential(nn.BatchNorm1d(self.enc_dim[4]),\
                                self.act)
 
-        self.enc4  = nn.Linear(1024,128)
-        self.enc4s = nn.Sequential(nn.BatchNorm1d(128),\
+        self.enc4  = nn.Linear(self.enc_dim[4],self.enc_dim[5])
+        self.enc4s = nn.Sequential(nn.BatchNorm1d(self.enc_dim[5]),\
                                self.act)
 
-        self.logvar = nn.Linear(128,self.z_dim)
+        self.logvar = nn.Linear(self.enc_dim[5],self.z_dim)
 
-        self.mu    = nn.Linear(128, self.z_dim)
+        self.mu    = nn.Linear(self.enc_dim[5], self.z_dim)
 
-        self.dec1  = nn.Linear(self.z_dim,128)
-        self.dec1s = nn.Sequential(nn.BatchNorm1d(128),\
+        self.dec1  = nn.Linear(self.z_dim,self.dec_dim[0])
+        self.dec1s = nn.Sequential(nn.BatchNorm1d(self.dec_dim[0]),\
                                self.act)
 
-        self.dec2  = nn.Linear(128,1024)
-        self.dec2s = nn.Sequential(nn.BatchNorm1d(1024),\
+        self.dec2  = nn.Linear(self.dec_dim[0],self.dec_dim[1])
+        self.dec2s = nn.Sequential(nn.BatchNorm1d(self.dec_dim[1]),\
                                self.act)
 
-        self.dec3  = nn.Linear(1024,7*7*256)
-        self.dec3s = nn.Sequential(nn.BatchNorm1d(7*7*256),\
+        self.dec3  = nn.Linear(self.dec_dim[1],self.dec_dim[2])
+        self.dec3s = nn.Sequential(nn.BatchNorm1d(self.dec_dim[2]),\
                                self.act)
 
-        self.dec4  = nn.ConvTranspose2d(256,128,5,stride=2,padding=2)
-        self.dec4s = nn.Sequential(nn.BatchNorm2d(128),\
+        self.dec4  = nn.ConvTranspose2d(self.dec_dim[3],self.dec_dim[4]
+                                        ,5,stride=2,padding=2)
+        self.dec4s = nn.Sequential(nn.BatchNorm2d(self.dec_dim[4]),\
                                self.act)
 
-        self.dec5  = nn.ConvTranspose2d(128,1,5,stride=2,padding=2)
+        self.dec5  = nn.ConvTranspose2d(self.dec_dim[4],self.dec_dim[5],
+                                        5,stride=2,padding=2)
         self.dec5s = nn.Sequential(nn.BatchNorm2d(1),\
                                self.act)
 
-        self.dec6  = nn.ConvTranspose2d(1,1,4,stride=1,padding=0)
+        self.dec6  = nn.ConvTranspose2d(self.dec_dim[5],self.dec_dim[6],
+                                        4,stride=1,padding=0)
         self.dec6s = nn.Sequential(nn.BatchNorm2d(1),\
                                nn.Sigmoid())
 
@@ -99,9 +103,12 @@ class VariationnalAutoEncoder(nn.Module):
         y         = self.decode(z)
         return y
 
-def num_flat_features(self,x):
+    def num_flat_features(self,x):
         size = x.size()[1:]
         num  = 1
         for s in size:
             num *= s
         return num
+
+if __name__ == "__main__":
+    model = VariationnalAutoEncoder()
