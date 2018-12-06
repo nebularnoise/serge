@@ -4,7 +4,7 @@ import torch.functional as F
 
 
 class VariationnalAutoEncoder(nn.Module):
-    def __init__(self):
+    def __init__(self, determinist_encoder=False):
         """Defines the inner layers of a variationnal auto encoderself.
 
         Parameters
@@ -14,13 +14,16 @@ class VariationnalAutoEncoder(nn.Module):
         """
         super(VariationnalAutoEncoder,self).__init__()
 
+        self.determinist_encoder = determinist_encoder
+
         self.act   = nn.LeakyReLU()
-        self.tanh  = nn.Tanh()
 
         self.enc_dim = [1,128,256,7*7*256,1024,128]
         self.dec_dim = [128,1024,7*7*256,256,128,1,1]
 
         self.z_dim = 32
+
+        #-----------------DEFINITION OF THE ENCODER-----------------------------
 
         self.enc1  = nn.Conv2d(1,self.enc_dim[1],5,padding=2,stride=2)
         self.enc1s = nn.Sequential(nn.BatchNorm2d(self.enc_dim[1]),\
@@ -38,10 +41,14 @@ class VariationnalAutoEncoder(nn.Module):
         self.enc4s = nn.Sequential(nn.BatchNorm1d(self.enc_dim[5]),\
                                self.act)
 
-        self.logvar = nn.Linear(self.enc_dim[5],self.z_dim)
+        if self.determinist_encoder:
+            self.enc5 = nn.Linear(self.enc_dim[5],z_dim)
+        else:
+            self.logvar = nn.Linear(self.enc_dim[5],self.z_dim)
+            self.mu    = nn.Linear(self.enc_dim[5], self.z_dim)
 
-        self.mu    = nn.Linear(self.enc_dim[5], self.z_dim)
-
+        #-----------------DEFINITION OF THE DECODER-----------------------------
+        
         self.dec1  = nn.Linear(self.z_dim,self.dec_dim[0])
         self.dec1s = nn.Sequential(nn.BatchNorm1d(self.dec_dim[0]),\
                                self.act)
@@ -77,11 +84,13 @@ class VariationnalAutoEncoder(nn.Module):
         x = x.view(-1,self.num_flat_features(x))
         x = self.enc3s(self.enc3(x))
         x = self.enc4s(self.enc4(x))
-
-        logvar = self.logvar(x)
-        mu     = self.mu(x)
-
-        return logvar,mu
+        if self.determinist_encoder:
+            z = self.enc_5(x)
+            return z
+        else:
+            logvar = self.logvar(x)
+            mu     = self.mu(x)
+            return logvar,mu
 
     def sample(self,logvar,mu):
         return mu + torch.randn_like(mu)*torch.exp(.5*logvar)
