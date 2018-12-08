@@ -15,6 +15,8 @@ parser.add_argument("--dataset", type=str, default="MNIST",
                     help="Name of the dataset to be used")
 parser.add_argument("--batch", type=int, default=128,
                     help="Size of the minibatch")
+parser.add_argument("--cuda", action="store_true", help="Define wheiter CUDA is\
+                    available or not.")
 args = parser.parse_args()
 
 print("\033[01mCreating a VAE with the following specs:\033[0m")
@@ -22,7 +24,7 @@ print("   - Latent space has %d dimensions" % args.zdim)
 print("   - Encoder is %s." % ("determinist" if args.deter else "stochastic"))
 print("   - Training is made on %d epochs." % args.epoch)
 
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda:0" if args.cuda else "cpu")
 
 model = arch.VariationnalAutoEncoder(determinist_encoder=args.deter,
                                     z_dim=args.zdim)
