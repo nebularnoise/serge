@@ -2,3 +2,5 @@ venv/
 out/
 MNIST/
 FMNIST/
+*.pyc
+*.DS_Store
