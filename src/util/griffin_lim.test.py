@@ -1,6 +1,7 @@
 import numpy as np
 import griffin_lim as gl
 from matplotlib import pyplot as plt
+import soundfile as sf
 
 # Build test signal
 
@@ -8,17 +9,17 @@ fe = 44100.
 length_seconds = 0.5
 n_samples = int(fe * length_seconds)
 
-f0 = 3000. / fe
+f0 = 440. / fe
 
-x_ref = 1 * np.sin(2 * np.pi * f0 * np.arange(0, n_samples))
-x_ref += 0.5* np.sin(2 * np.pi * 2 * f0 * np.arange(0, n_samples))
-x_ref += 0.5 * np.sin(2 * np.pi * 3 * f0 * np.arange(0, n_samples))
+x_ref = 0.5 * np.sin(2 * np.pi * f0 * np.arange(0, n_samples))
+x_ref += 0.1* np.sin(2 * np.pi * 2 * f0 * np.arange(0, n_samples))
+x_ref += 0.1 * np.sin(2 * np.pi * 3 * f0 * np.arange(0, n_samples))
 
 # Compute stft and stft magnitude
 
-n_fft = 512
-hop_size = int(np.floor(n_fft / 2))
-window = np.sqrt(np.hanning(n_fft))
+n_fft = 2048
+hop_size = int(n_fft // 4)
+window = np.hanning(n_fft)
 
 spectrum_ref = gl.griffin_lim_stft(x_ref, window, hop_size)
 spectrum_mag = np.absolute(spectrum_ref)
@@ -31,9 +32,12 @@ plt.show()
 # Reconstruct x from the stft magnitude
 
 x_reconstruct = gl.griffin_lim_reconstruct(
-    spectrum_mag, window, hop_size, 1000)
+    spectrum_mag, window, hop_size, 10000)
 
 s_reconstruct = gl.griffin_lim_stft(x_reconstruct, window, hop_size)
+
+sf.write('x_ref.wav', x_reconstruct_ref * 0.5, int(fe))
+sf.write('x_reconstruct.wav', x_reconstruct * 0.5, int(fe))
 
 # Plot the reconstruction against the reference
 

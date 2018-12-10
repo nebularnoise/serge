@@ -49,12 +49,14 @@ def griffin_lim_reconstruct(spectrum_mag, window, hop_size, nIter):
     n_slices = len(spectrum_mag[0])
     n_samples = n_slices * hop_size + len(window)
 
-    x = np.random.rand(n_samples)
+    angles = np.exp(2j * np.pi * np.random.rand(*spectrum_mag.shape))
+
+    x = np.random.randn(n_samples)
 
     for k in range(0, maxIterations):
-        S = griffin_lim_stft(x, window, hop_size)
-        angle = np.angle(S)
-        S = spectrum_mag * np.exp(1.0j * angle)
-        x = griffin_lim_istft(S, window, hop_size)
+	spectrum_est = spectrum_mag * angles
+	x = griffin_lim_istft(spectrum_est, window, hop_size)
+	spectrum_reconstruct = griffin_lim_stft(x, window, hop_size)
+        angles = np.exp(1j * np.angle(spectrum_reconstruct))
 
     return x
