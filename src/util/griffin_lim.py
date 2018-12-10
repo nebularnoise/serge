@@ -6,7 +6,7 @@ def griffin_lim_stft(x, window, hop_size):
     n_fft = len(window)
     n_slices = int(np.floor((len(x) - len(window)) / hop_size))
 
-    spectrum = np.empty((n_fft / 2 + 1, n_slices), dtype=complex)
+    spectrum = np.empty((int(n_fft / 2 + 1), n_slices), dtype=complex)
 
     start_index = 0
     end_index = n_fft
