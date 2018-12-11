@@ -5,9 +5,6 @@ import numpy as np
 from sys import stdout
 
 def determinist_forward_pass(model,minibatch):
-    """
-
-    """
     z = model.encode(minibatch)
     reconstruction = model.decode(z)
     return z,reconstruction
@@ -29,7 +26,8 @@ def Wloss():
 
 def train_model(model, device, train_loader, test_loader, epoch,
                 rec_loss_f, mode="V", lr=1e-3):
-    statut = "EPOCH %d, TRAIN_LOSS: %f, TEST_LOSS: %f "
+    name = input("     Name of the session: ")
+    statut = "     EPOCH %d, TRAIN_LOSS: %f, TEST_LOSS: %f "
     train_loss_log = np.zeros(epoch)
     test_loss_log  = np.zeros(epoch)
 
@@ -86,3 +84,5 @@ def train_model(model, device, train_loader, test_loader, epoch,
 
                 test_loss_log[e] += loss.item()
         print(statut % (e,train_loss_log[e],test_loss_log[e]))
+        if test_loss_log[e] < test_loss_log[e-1]:
+            torch.save(model,'model_{}.torch'.format(name))
