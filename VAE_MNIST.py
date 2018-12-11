@@ -24,6 +24,8 @@ parser.add_argument("--mode", type=str, default="V", help="Define the Latent\
                     Space regularization method (V or W)")
 parser.add_argument("--lr", type=int, default=3, help="Define how slow the\
                     learning is 10^(1-5)")
+parser.add_argument("--name", type=int, default="untitled", help="Name of the\
+                    output file")
 args = parser.parse_args()
 
 print("\033[01mCreating a VAE with the following specs:\033[0m")
@@ -54,4 +56,4 @@ if args.rec_loss == "BCE":
 print("Training...\033[0m")
 
 train_model(model, device, train_loader, test_loader,
-            args.epoch, rec_loss_f, mode=args.mode, lr=10**(-args.lr))
+            args.epoch, rec_loss_f, args.name, mode=args.mode, lr=10**(-args.lr))

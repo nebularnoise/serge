@@ -25,8 +25,7 @@ def Wloss():
     pass
 
 def train_model(model, device, train_loader, test_loader, epoch,
-                rec_loss_f, mode="V", lr=1e-3):
-    name = input("     Name of the session: ")
+                rec_loss_f, name, mode="V", lr=1e-3):
     statut = "     EPOCH %d, TRAIN_LOSS: %f, TEST_LOSS: %f "
     train_loss_log = np.zeros(epoch)
     test_loss_log  = np.zeros(epoch)
