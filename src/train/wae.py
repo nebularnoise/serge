@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.functional as F
+import numpy as np
+
 
 def train_wae(model, train_loader, device, number_of_epochs=300, learning_rate = 1e-3, lr_decay=0.2, lambda_factor=1):
 
