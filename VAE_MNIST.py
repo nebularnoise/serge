@@ -1,5 +1,6 @@
 import argparse
 from src import arch, dataset
+from src.train.base_VAE import train_model
 import torch
 
 parser = argparse.ArgumentParser(description="Utility for training a custom \
@@ -16,7 +17,13 @@ parser.add_argument("--dataset", type=str, default="MNIST",
 parser.add_argument("--batch", type=int, default=128,
                     help="Size of the minibatch")
 parser.add_argument("--cuda", action="store_true", help="Define wheiter CUDA is\
-                    available or not.")
+                    available or not")
+parser.add_argument("--rec-loss", type=str, default="BCE", help="Define what\
+                    reconstruction loss estimation to use")
+parser.add_argument("--mode", type=str, default="V", help="Define the Latent\
+                    Space regularization method (V or W)")
+parser.add_argument("--lr", type=int, default=3, help="Define how slow the\
+                    learning is 10^(1-5)")
 args = parser.parse_args()
 
 print("\033[01mCreating a VAE with the following specs:\033[0m")
@@ -37,3 +44,14 @@ print("\033[01mLoading specified dataset\033[0m")
 print("     Loading %s..." % args.dataset)
 train_loader, test_loader = dataset.load_MNIST(args.dataset, args.batch)
 print("     Done!")
+
+
+print("\033[01mTraining initialization")
+
+if args.rec_loss == "BCE":
+    rec_loss_f = torch.nn.functional.binary_cross_entropy
+
+print("Training...\033[0m")
+
+train_model(model, device, train_loader, test_loader,
+            args.epoch, rec_loss_f, mode=args.mode, lr=10**(-args.lr))
