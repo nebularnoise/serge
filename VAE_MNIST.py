@@ -16,8 +16,7 @@ parser.add_argument("--dataset", type=str, default="MNIST",
                     help="Name of the dataset to be used")
 parser.add_argument("--batch", type=int, default=128,
                     help="Size of the minibatch")
-parser.add_argument("--cuda", action="store_true", help="Define wheiter CUDA is\
-                    available or not")
+parser.add_argument("--cuda", type=int, default=-1, help="Define wich GPU to use")
 parser.add_argument("--rec-loss", type=str, default="BCE", help="Define what\
                     reconstruction loss estimation to use")
 parser.add_argument("--mode", type=str, default="V", help="Define the Latent\
@@ -33,7 +32,7 @@ print("   - Latent space has %d dimensions" % args.zdim)
 print("   - Encoder is %s." % ("determinist" if args.deter else "stochastic"))
 print("   - Training is made on %d epochs." % args.epoch)
 
-device = torch.device("cuda:0" if args.cuda else "cpu")
+device = torch.device("cuda:%d" % args.cuda if args.cuda >= 0 else "cpu")
 
 model = arch.VariationnalAutoEncoder(determinist_encoder=args.deter,
                                     z_dim=args.zdim)
