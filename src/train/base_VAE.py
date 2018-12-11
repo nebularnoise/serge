@@ -83,6 +83,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
                 # LOG
 
                 test_loss_log[e] += loss.item()
+                
         print(statut % (e,train_loss_log[e],test_loss_log[e]))
         if test_loss_log[e] < test_loss_log[e-1]:
             torch.save(model,'model_{}.torch'.format(name))
