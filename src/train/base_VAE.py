@@ -87,3 +87,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
         print(statut % (e,train_loss_log[e],test_loss_log[e]))
         if (test_loss_log[e] < test_loss_log[e-1]) or (e==0):
             torch.save(model,'model_{}.torch'.format(name))
+
+        if (e%20==0):
+            lr /= 5
+            optimizer = torch.optim.Adam(model.parameters(), lr=lr)
