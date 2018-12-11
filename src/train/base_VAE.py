@@ -84,6 +84,9 @@ def train_model(model, device, train_loader, test_loader, epoch,
                 test_loss_log[e] += loss.item()
 
         print(statut % (e,train_loss_log[e],test_loss_log[e]))
+
+        np.save("log",{"train":train_loss_log,"test":test_loss_log})
+
         if (test_loss_log[e] < test_loss_log[e-1]) or (e==0):
             torch.save(model,'model_{}.torch'.format(name))
 
