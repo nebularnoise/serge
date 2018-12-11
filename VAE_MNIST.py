@@ -23,7 +23,7 @@ parser.add_argument("--mode", type=str, default="V", help="Define the Latent\
                     Space regularization method (V or W)")
 parser.add_argument("--lr", type=int, default=3, help="Define how slow the\
                     learning is 10^(1-5)")
-parser.add_argument("--name", type=int, default="untitled", help="Name of the\
+parser.add_argument("--name", type=str, default="untitled", help="Name of the\
                     output file")
 args = parser.parse_args()
 
