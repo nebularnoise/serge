@@ -5,6 +5,9 @@ import numpy as np
 from sys import stdout
 
 def determinist_forward_pass(model,minibatch):
+    """
+
+    """
     z = model.encode(minibatch)
     reconstruction = model.decode(z)
     return z,reconstruction
@@ -26,6 +29,7 @@ def Wloss():
 
 def train_model(model, device, train_loader, test_loader, epoch,
                 rec_loss_f, mode="V", lr=1e-3):
+    statut = "EPOCH %d, TRAIN_LOSS: %f, TEST_LOSS: %f "
     train_loss_log = np.zeros(epoch)
     test_loss_log  = np.zeros(epoch)
 
@@ -37,7 +41,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
 
         for batch_idx, minibatch in enumerate(train_loader):
 
-            print("     Working on minibatch %d..." % (batch_idx), end="\r")
+            print("Training on minibatch %d...        " % (batch_idx), end="\r")
 
             minibatch = minibatch[0].to(device).squeeze(1)
             optimizer.zero_grad()
@@ -61,7 +65,8 @@ def train_model(model, device, train_loader, test_loader, epoch,
 
         model.eval()
         with torch.no_grad():
-            for batch_idx, minibatch in enumerate(train_loader):
+            for batch_idx, minibatch in enumerate(test_loader):
+                print("Testing on minibatch %d...     " % (batch_idx), end="\r")
                 minibatch = minibatch[0].to(device).squeeze(1)
                 optimizer.zero_grad()
 
@@ -80,3 +85,4 @@ def train_model(model, device, train_loader, test_loader, epoch,
                 # LOG
 
                 test_loss_log[e] += loss.item()
+        print(statut % (e,train_loss_log[e],test_loss_log[e]))
