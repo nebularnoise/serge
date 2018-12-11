@@ -171,5 +171,6 @@ class VariationnalAutoEncoder(nn.Module):
             num *= s
         return num
 
+
 if __name__ == "__main__":
     model = VariationnalAutoEncoder(determinist_encoder=True,z_dim=32)
