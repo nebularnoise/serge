@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.functional as F
 import numpy as np
+from sys import stdout
 
 def determinist_forward_pass(model,minibatch):
     z = model.encode(minibatch)
@@ -30,10 +31,14 @@ def train_model(model, device, train_loader, test_loader, epoch,
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
+    train_size = len(train_loader)
     for e in range(epoch):
         model.train()
 
         for batch_idx, minibatch in enumerate(train_loader):
+
+            print("     Working on minibatch %d..." % (batch_idx), end="\r")
+
             minibatch = minibatch[0].to(device).squeeze(1)
             optimizer.zero_grad()
 
