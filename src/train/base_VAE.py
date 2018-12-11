@@ -17,7 +17,7 @@ def stochastic_forward_pass(model,minibatch):
 
 def Vloss(logvar,mu,output,minibatch,rec_loss_f):
     kl_loss  = 0.5 * torch.sum(torch.exp(logvar) + mu**2 - 1. - logvar)
-    rec_loss = rec_loss_f(output, minibatch.unsqueeze(1))
+    rec_loss = rec_loss_f(output, minibatch.unsqueeze(1),reduction="sum")
     loss = kl_loss + rec_loss
     return loss
 
@@ -83,7 +83,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
                 # LOG
 
                 test_loss_log[e] += loss.item()
-                
+
         print(statut % (e,train_loss_log[e],test_loss_log[e]))
-        if test_loss_log[e] < test_loss_log[e-1]:
+        if (test_loss_log[e] < test_loss_log[e-1]) or (e==0):
             torch.save(model,'model_{}.torch'.format(name))
