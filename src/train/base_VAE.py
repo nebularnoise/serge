@@ -73,7 +73,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
             if mode=="V":
                 loss = Vloss(logvar,mu,rec,minibatch,rec_loss_f)
             elif mode=="W":
-                loss = Wloss(z)
+                loss = Wloss(z,rec,minibatch,rec_loss_f)
 
             # BACKWARD PASS
             train_loss_log[e] += loss.item()
@@ -97,7 +97,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
                 if mode=="V":
                     loss = Vloss(logvar,mu,rec,minibatch,rec_loss_f)
                 elif mode=="W":
-                    pass
+                    loss = Wloss(z,rec,minibatch,rec_loss_f)
 
                 # LOG
 
