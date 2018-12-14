@@ -22,8 +22,27 @@ def Vloss(logvar,mu,output,minibatch,rec_loss_f):
     loss = kl_loss + rec_loss
     return loss
 
-def Wloss():
-    pass
+def compute_kernel(x, y):
+    x_size = x.size(0)
+    y_size = y.size(0)
+    dim = x.size(1)
+    x = x.unsqueeze(1) # (x_size, 1, dim)
+    y = y.unsqueeze(0) # (1, y_size, dim)
+    tiled_x = x.expand(x_size, y_size, dim)
+    tiled_y = y.expand(x_size, y_size, dim)
+    kernel_input = (tiled_x - tiled_y).pow(2).mean(2)/float(dim)
+    return torch.exp(-kernel_input) # (x_size, y_size)
+
+def compute_mmd(x, y):
+    x_kernel = compute_kernel(x, x)
+    y_kernel = compute_kernel(y, y)
+    xy_kernel = compute_kernel(x, y)
+    mmd = x_kernel.mean() + y_kernel.mean() - 2*xy_kernel.mean()
+    return mmd
+
+def Wloss(z, output, minibatch, rec_loss_f):
+    return compute_mmd(z,torch.randn_like(z)) +\
+     rec_loss_f(output, minibatch.unsqueeze(1), size_average=False)
 
 def train_model(model, device, train_loader, test_loader, epoch,
                 rec_loss_f, name, mode="V", lr=1e-3):
@@ -54,7 +73,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
             if mode=="V":
                 loss = Vloss(logvar,mu,rec,minibatch,rec_loss_f)
             elif mode=="W":
-                pass
+                loss = Wloss(z)
 
             # BACKWARD PASS
             train_loss_log[e] += loss.item()
