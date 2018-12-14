@@ -88,7 +88,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
 
         np.save("log",{"train":train_loss_log,"test":test_loss_log})
 
-        if (test_loss_log[e] < np.test_loss_log[:e]) and ((e+1)%3==0):
+        if (test_loss_log[e] < np.min(test_loss_log[:e])) and ((e+1)%3==0):
             torch.save(model,'model_{}.torch'.format(name))
 
         if ((e+1)%20==0):
