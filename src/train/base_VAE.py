@@ -17,12 +17,32 @@ def stochastic_forward_pass(model,minibatch):
 
 def Vloss(logvar,mu,output,minibatch,rec_loss_f):
     kl_loss  = 0.5 * torch.sum(torch.exp(logvar) + mu**2 - 1. - logvar)
-    rec_loss = rec_loss_f(output, minibatch.unsqueeze(1),reduction="sum")
+    #rec_loss = rec_loss_f(output, minibatch.unsqueeze(1),reduction="sum")
+    rec_loss = rec_loss_f(output, minibatch.unsqueeze(1), size_average=False)
     loss = kl_loss + rec_loss
     return loss
 
-def Wloss():
-    pass
+def compute_kernel(x, y):
+    x_size = x.size(0)
+    y_size = y.size(0)
+    dim = x.size(1)
+    x = x.unsqueeze(1) # (x_size, 1, dim)
+    y = y.unsqueeze(0) # (1, y_size, dim)
+    tiled_x = x.expand(x_size, y_size, dim)
+    tiled_y = y.expand(x_size, y_size, dim)
+    kernel_input = (tiled_x - tiled_y).pow(2).mean(2)/float(dim)
+    return torch.exp(-kernel_input) # (x_size, y_size)
+
+def compute_mmd(x, y):
+    x_kernel = compute_kernel(x, x)
+    y_kernel = compute_kernel(y, y)
+    xy_kernel = compute_kernel(x, y)
+    mmd = x_kernel.mean() + y_kernel.mean() - 2*xy_kernel.mean()
+    return mmd
+
+def Wloss(z, output, minibatch, rec_loss_f):
+    return compute_mmd(z,torch.randn_like(z)) +\
+     rec_loss_f(output, minibatch.unsqueeze(1), size_average=False)
 
 def train_model(model, device, train_loader, test_loader, epoch,
                 rec_loss_f, name, mode="V", lr=1e-3):
@@ -53,7 +73,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
             if mode=="V":
                 loss = Vloss(logvar,mu,rec,minibatch,rec_loss_f)
             elif mode=="W":
-                pass
+                loss = Wloss(z,rec,minibatch,rec_loss_f)
 
             # BACKWARD PASS
             train_loss_log[e] += loss.item()
@@ -77,7 +97,7 @@ def train_model(model, device, train_loader, test_loader, epoch,
                 if mode=="V":
                     loss = Vloss(logvar,mu,rec,minibatch,rec_loss_f)
                 elif mode=="W":
-                    pass
+                    loss = Wloss(z,rec,minibatch,rec_loss_f)
 
                 # LOG
 
@@ -87,9 +107,10 @@ def train_model(model, device, train_loader, test_loader, epoch,
 
         np.save("log",{"train":train_loss_log,"test":test_loss_log})
 
-        if (test_loss_log[e] < test_loss_log[e-1]) or (e==0):
-            torch.save(model,'model_{}.torch'.format(name))
+        if ((e+1)%3==0):
+            if (test_loss_log[e] < np.min(test_loss_log[:e])):
+                torch.save(model,'model_{}.torch'.format(name))
 
-        if (e%20==0):
-            lr /= 5
+        if (e%100==0) and (e>=100):
+            lr /= 2
             optimizer = torch.optim.Adam(model.parameters(), lr=lr)
