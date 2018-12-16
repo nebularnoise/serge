@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.functional as F
 import numpy as np
 from sys import stdout
+from os import system
 
 def determinist_forward_pass(model,minibatch):
     z = model.encode(minibatch)
@@ -49,6 +50,13 @@ def train_model(model, device, train_loader, test_loader, epoch,
     statut = "     EPOCH %d, TRAIN_LOSS: %f, TEST_LOSS: %f "
     train_loss_log = np.zeros(epoch)
     test_loss_log  = np.zeros(epoch)
+
+    try:
+        system("mkdir %s" % name)
+    except:
+        print("     Directory %s already exists...")
+        return False
+
 
     optimizer = torch.optim.Adam(model.parameters(), lr=lr)
 
@@ -105,12 +113,14 @@ def train_model(model, device, train_loader, test_loader, epoch,
 
         print(statut % (e,train_loss_log[e],test_loss_log[e]))
 
-        np.save("log",{"train":train_loss_log,"test":test_loss_log})
+        np.save("%s/log" % name,{"train":train_loss_log,"test":test_loss_log})
 
         if ((e+1)%3==0):
             if (test_loss_log[e] < np.min(test_loss_log[:e])):
-                torch.save(model,'model_{}.torch'.format(name))
+                torch.save(model,'{}/model_{}.torch'.format(name,name))
 
         if (e%100==0) and (e>=100):
             lr /= 2
             optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+
+    return True

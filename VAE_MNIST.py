@@ -54,5 +54,12 @@ if args.rec_loss == "BCE":
 
 print("Training...\033[0m")
 
-train_model(model, device, train_loader, test_loader,
-            args.epoch, rec_loss_f, args.name, mode=args.mode, lr=10**(-args.lr))
+statut = train_model(model, device, train_loader, test_loader,
+                    args.epoch, rec_loss_f, args.name,
+                    mode=args.mode, lr=10**(-args.lr))
+
+
+if statut:
+    print("\033[01mEverything went okay, exiting...\033[0m")
+else:
+    print("Something went wrong, exiting...\O33[0m")
