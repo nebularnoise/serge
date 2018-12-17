@@ -51,10 +51,10 @@ def train_model(model, device, train_loader, test_loader, epoch,
     train_loss_log = np.zeros(epoch)
     test_loss_log  = np.zeros(epoch)
 
-    try:
-        system("mkdir %s" % name)
-    except:
-        print("     Directory %s already exists...")
+
+    new_dir_error = system("mkdir %s" % name)
+    
+    if new_dir_error:
         return False
 
 
