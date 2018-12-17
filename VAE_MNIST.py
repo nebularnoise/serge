@@ -62,4 +62,4 @@ statut = train_model(model, device, train_loader, test_loader,
 if statut:
     print("\033[01mEverything went okay, exiting...\033[0m")
 else:
-    print("Something went wrong, exiting...\O33[0m")
+    print("\033[01mSomething went wrong, exiting...\033[0m")
