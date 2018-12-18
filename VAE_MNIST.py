@@ -39,6 +39,11 @@ model = arch.VariationnalAutoEncoder(determinist_encoder=args.deter,
 
 model = model.to(device)
 
+#INITIALIZING DATA
+
+for param in model.parameters():
+    torch.init.xavier_normal_(param.data)
+
 print("   - Device used is %s." % str(device))
 
 print("\033[01mLoading specified dataset\033[0m")
