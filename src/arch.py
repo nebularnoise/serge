@@ -86,6 +86,10 @@ class VariationnalAutoEncoder(nn.Module):
         self.dec6s = nn.Sequential(nn.BatchNorm2d(1),\
                                nn.Sigmoid())
 
+        for elm in [self.enc1, self.enc2, self.enc3, self.enc4, self.logvar, self.mu,\
+                    self.dec1, self.dec2, self.dec3, self.dec4, self.dec5, self.dec6]:
+            torch.nn.init.xavier_normal_(elm.weight.data)
+
     def encode(self,x):
         """Encode pass of the auto encoder.
 
