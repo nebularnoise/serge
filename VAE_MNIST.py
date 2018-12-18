@@ -42,7 +42,7 @@ model = model.to(device)
 #INITIALIZING DATA
 
 for param in model.parameters():
-    torch.init.xavier_normal_(param.data)
+    torch.nn.init.xavier_normal_(param.data)
 
 print("   - Device used is %s." % str(device))
 

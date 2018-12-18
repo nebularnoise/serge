@@ -52,8 +52,9 @@ def train_model(model, device, train_loader, test_loader, epoch,
     test_loss_log  = np.zeros(epoch)
 
 
+
     new_dir_error = system("mkdir %s" % name)
-    
+
     if new_dir_error:
         return False
 
