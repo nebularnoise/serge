@@ -14,3 +14,6 @@ notebooks/.ipynb_checkpoints/
 *.pd_darwin
 *_x86_64
 *_i386
+build/
+*/build/
+libtorch/

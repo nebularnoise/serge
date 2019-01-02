@@ -22,8 +22,6 @@
 // object definition
 //-----------------------------------------------------------------
 
-static	t_class* vae_sampler_class;
-
 typedef struct vae_sampler_t
 {
 	t_object	obj;
@@ -31,6 +29,7 @@ typedef struct vae_sampler_t
 
 } vae_sampler;
 
+static	t_class* vae_sampler_class;
 //-----------------------------------------------------------------
 // methods
 //-----------------------------------------------------------------
@@ -64,7 +63,7 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c1, float c2, float c
 {
 	DEBUG_POST("Fire : %f %f %f %f", c1, c2, c3, c4);
 
-	//TODO: pick a new voice and fill its buffer with the model's output
+	//TODO: fill the output buffer with the model's output
 }
 
 void* vae_sampler_new()
@@ -94,7 +93,7 @@ void vae_sampler_tilde_setup(void)
 				      CLASS_DEFAULT, A_DEFFLOAT,
 				      0);
 
-	class_addmethod(vae_sampler_class, (t_method)vae_sampler_dsp, gensym("dsp"), 0);
-	class_addmethod(vae_sampler_class, (t_method)vae_sampler_load, gensym("load"), A_SYMBOL, 0);
-	class_addmethod(vae_sampler_class, (t_method)vae_sampler_fire, gensym("play"), A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, 0);
+	class_addmethod(vae_sampler_class, (t_method)vae_sampler_dsp, gensym("dsp"), A_NULL);
+	class_addmethod(vae_sampler_class, (t_method)vae_sampler_load, gensym("load"), A_SYMBOL, A_NULL);
+	class_addmethod(vae_sampler_class, (t_method)vae_sampler_fire, gensym("play"), A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, A_NULL);
 }
