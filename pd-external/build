@@ -1,0 +1,10 @@
+#!/bin/bash
+
+PD_SDK="./"
+EXTNAME="vae_sampler~"
+PD_OPTIONS="-shared -undefined dynamic_lookup"
+FLAGS="-DDEBUG"
+
+clang -o "$EXTNAME"_i386 -arch i386 $PD_OPTIONS -I"$PD_SDK" $FLAGS "$EXTNAME".c
+clang -o "$EXTNAME"_x86_64 -arch x86_64 $PD_OPTIONS -I"$PD_SDK" $FLAGS "$EXTNAME".c
+lipo -create -output "$EXTNAME".pd_darwin "$EXTNAME"_x86_64 "$EXTNAME"_i386

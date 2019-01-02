@@ -11,3 +11,6 @@ notebooks/.ipynb_checkpoints/
 *.npy
 *.pt
 *.wav
+*.pd_darwin
+*_x86_64
+*_i386

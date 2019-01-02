@@ -1,0 +1,14 @@
+#N canvas 321 207 450 300 10;
+#X obj 153 112 vae_sampler~;
+#X obj 153 196 *~;
+#X obj 196 160 hsl 128 15 0 1 0 0 empty empty empty -2 -8 0 10 -262144
+-1 -1 0 1;
+#X obj 153 242 dac~;
+#X msg 153 51 load ./model.pt;
+#X msg 261 51 play 10 5.2 3.1 70;
+#X connect 0 0 1 0;
+#X connect 1 0 3 0;
+#X connect 1 0 3 1;
+#X connect 2 0 1 1;
+#X connect 4 0 0 0;
+#X connect 5 0 0 0;
