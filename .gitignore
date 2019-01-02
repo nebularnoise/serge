@@ -9,3 +9,5 @@ notebooks/.ipynb_checkpoints/
 *.torch
 *.sh
 *.npy
+*.pt
+*.wav
