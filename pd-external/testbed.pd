@@ -1,14 +1,27 @@
-#N canvas 321 207 450 300 10;
-#X obj 153 112 vae_sampler~;
-#X obj 153 196 *~;
-#X obj 196 160 hsl 128 15 0 1 0 0 empty empty empty -2 -8 0 10 -262144
--1 -1 0 1;
+#N canvas 608 226 450 300 10;
+#X obj 153 162 vae_sampler~;
+#X obj 153 216 *~;
+#X obj 196 190 hsl 128 15 0 1 0 0 empty empty empty -2 -8 0 10 -262144
+-1 -1 2600 1;
 #X obj 153 242 dac~;
-#X msg 153 51 load ./model.pt;
-#X msg 261 51 play 10 5.2 3.1 70;
+#X obj 153 72 openpanel;
+#X obj 153 44 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X msg 153 101 load \$1;
+#X obj 54 149 print;
+#X msg 207 28 load /Users/martinfouilleul/Documents/Atiam/Info/MLProject/serge/pd-external/modelbidon2.pt
+;
+#X obj 208 8 bng 15 250 50 0 empty empty empty 17 7 0 10 -262144 -1
+-1;
+#X msg 211 101 play 10 5.2 3.1 70 0.02;
 #X connect 0 0 1 0;
 #X connect 1 0 3 0;
 #X connect 1 0 3 1;
 #X connect 2 0 1 1;
-#X connect 4 0 0 0;
-#X connect 5 0 0 0;
+#X connect 4 0 6 0;
+#X connect 5 0 4 0;
+#X connect 6 0 0 0;
+#X connect 6 0 7 0;
+#X connect 8 0 0 0;
+#X connect 9 0 8 0;
+#X connect 10 0 0 0;

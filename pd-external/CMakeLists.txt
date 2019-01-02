@@ -12,15 +12,17 @@ if(UNIX AND NOT APPLE)
   set(EXTENSION "~.pd_linux")
 endif()
 
-if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
-  add_definitions(-DDEBUG)
+if(CMAKE_BUILD_TYPE)
+  if(${CMAKE_BUILD_TYPE} STREQUAL Debug)
+    add_definitions(-DDEBUG)
+  endif()
 endif()
 
 project(pd-external)
 
 find_package(Torch REQUIRED)
 
-set(SRC vae_sampler~.cpp)
+set(SRC vae_sampler~.c vae_util.cpp)
 add_library(vae_sampler SHARED ${SRC})
 set_target_properties(vae_sampler PROPERTIES SUFFIX ${EXTENSION} PREFIX "")
 set_target_properties(vae_sampler PROPERTIES CMAKE_CXX_STANDARD 11)
