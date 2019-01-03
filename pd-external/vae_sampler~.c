@@ -7,30 +7,38 @@
 //*****************************************************************
 #include<stdlib.h>
 #include"m_pd.h"
+#include"vae_util.h"
 
 //-----------------------------------------------------------------
-// util
+// debug printing macros
 //-----------------------------------------------------------------
 
 #ifdef DEBUG
-#define DEBUG_POST(s, ...) post(s, ##__VA_ARGS__)
+	#define DEBUG_POST(s, ...) post(s, ##__VA_ARGS__)
 #else
-#define DEBUG_POST(s, ...)
+	#define DEBUG_POST(s, ...)
 #endif
+#define ERROR_POST(s, ...) error(s, ##__VA_ARGS__)
 
 //-----------------------------------------------------------------
 // object definition
 //-----------------------------------------------------------------
 
-static	t_class* vae_sampler_class;
+const int SAMPLE_BUFFER_SIZE = 34560;
 
 typedef struct vae_sampler_t
 {
 	t_object	obj;
 	t_outlet*	out;
 
+	vae_model*	model;
+	int		play;
+	int		counter;
+	float		buffer[SAMPLE_BUFFER_SIZE];
+
 } vae_sampler;
 
+static	t_class* vae_sampler_class;
 //-----------------------------------------------------------------
 // methods
 //-----------------------------------------------------------------
@@ -41,9 +49,23 @@ t_int* vae_sampler_perform(t_int* w)
 	t_sample* out	= (t_sample*)w[2];
 	int n		= (int)w[3];
 
-	for(int i=0; i<n; i++)
+	int i=0;
+	if(x->play)
+	{
+		for(i=0; i<n && x->counter<SAMPLE_BUFFER_SIZE; i++)
+		{
+			out[i] = x->buffer[x->counter];
+			x->counter++;
+		}
+	}
+	for(; i<n; i++)
 	{
 		out[i] = 0;
+	}
+	if(x->counter >= SAMPLE_BUFFER_SIZE)
+	{
+		x->counter = 0;
+		x->play = 0;
 	}
 	return(w+4);
 }
@@ -55,16 +77,30 @@ void vae_sampler_dsp(vae_sampler* x, t_signal** sp)
 
 void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 {
-	DEBUG_POST("Load received : %s", sym->s_name);
-
-	//TODO: implement pytorch model import
+	if(VaeModelLoad(x->model, sym->s_name))
+	{
+		ERROR_POST("Can't load model %s...", sym->s_name);
+	}
+	else
+	{
+		DEBUG_POST("Loaded model %s", sym->s_name);
+	}
 }
 
-void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c1, float c2, float c3, float c4)
+void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float nu)
 {
-	DEBUG_POST("Fire : %f %f %f %f", c1, c2, c3, c4);
+	DEBUG_POST("Fire : %f %f %f %f", c1, c2, c3, nu);
 
-	//TODO: pick a new voice and fill its buffer with the model's output
+	if(VaeModelGetSamples(x->model, SAMPLE_BUFFER_SIZE, x->buffer, c0, c1, c2, c3, nu))
+	{
+		ERROR_POST("Failed to get samples from model...");
+	}
+	else
+	{
+		DEBUG_POST("Got samples from model");
+		x->counter = 0;
+		x->play = 1;
+	}
 }
 
 void* vae_sampler_new()
@@ -76,12 +112,15 @@ void* vae_sampler_new()
 	}
 
 	x->out = outlet_new(&x->obj, &s_signal);
-
+	x->model = VaeModelCreate();
+	x->play = 0;
+	x->counter = 0;
 	return((void*)x);
 }
 
 void vae_sampler_free(vae_sampler* x)
 {
+	VaeModelDestroy(x->model);
 	outlet_free(x->out);
 }
 
@@ -94,7 +133,7 @@ void vae_sampler_tilde_setup(void)
 				      CLASS_DEFAULT, A_DEFFLOAT,
 				      0);
 
-	class_addmethod(vae_sampler_class, (t_method)vae_sampler_dsp, gensym("dsp"), 0);
-	class_addmethod(vae_sampler_class, (t_method)vae_sampler_load, gensym("load"), A_SYMBOL, 0);
-	class_addmethod(vae_sampler_class, (t_method)vae_sampler_fire, gensym("play"), A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, 0);
+	class_addmethod(vae_sampler_class, (t_method)vae_sampler_dsp, gensym("dsp"), A_NULL);
+	class_addmethod(vae_sampler_class, (t_method)vae_sampler_load, gensym("load"), A_SYMBOL, A_NULL);
+	class_addmethod(vae_sampler_class, (t_method)vae_sampler_fire, gensym("play"), A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, A_NULL);
 }
