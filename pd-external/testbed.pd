@@ -2,7 +2,7 @@
 #X obj 153 362 vae_sampler~;
 #X obj 153 416 *~;
 #X obj 196 390 hsl 128 15 0 1 0 0 empty empty empty -2 -8 0 10 -262144
--1 -1 3200 1;
+-1 -1 0 1;
 #X obj 153 442 dac~;
 #X obj 153 72 openpanel;
 #X msg 153 94 load \$1;
@@ -17,8 +17,8 @@
 #X obj 172 225 unpack f f;
 #X obj 172 276 mtof;
 #X msg 172 335 play 10 5.2 3.1 70 \$1;
-#X text 320 330 play x0 x1 x2 x3 nu : plays a sample with coordinates
-(x0 \, x1 \, x2 \, x3) and reduced frequency nu;
+#X text 320 330 play x0 x1 x2 x3 freq : plays a sample with coordinates
+(x0 \, x1 \, x2 \, x3) and frequency freq;
 #X connect 0 0 1 0;
 #X connect 1 0 3 0;
 #X connect 1 0 3 1;
