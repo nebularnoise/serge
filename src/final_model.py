@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa as li
 from glob import glob
+import argparse
 
 class AudioDataset(data.Dataset):
     def __init__(self, files, process):
@@ -149,10 +150,10 @@ def compute_mmd(x, y):
     mmd = x_kernel.mean() + y_kernel.mean() - 2*xy_kernel.mean()
     return mmd
 
-def train():
+def train(model, GCloader, epoch, savefig=False):
+    model.train()
     lr = 1e-3
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
-    epoch = 1000
     loss = torch.nn.modules.BCELoss()
     for e in range(epoch):
         for idx, minibatch in enumerate(GCloader):
@@ -173,13 +174,40 @@ def train():
 
         if e%(epoch//10)==0:
             print("EPOCH %d, ERROR %f" % (e,error))
+            if savefig:
+                show_me_how_good_model_is_learning(model, GC, 4)
+                plt.savefig("output/epoch_%d.png"%e)
 
         if (e+1)%(epoch//3)==0:
             lr /= 2.
             optimizer = torch.optim.Adam(model.parameters(),lr=lr)
 
+def show_me_how_good_model_is_learning(model, GC, n):
+    model.eval()
+    N = len(GC)
+    with torch.no_grad():
+        plt.figure(figsize=(20,25))
+        for i in range(n):
+            idx = np.random.randint(N)
+            plt.subplot(n,2,2*i + 1)
+            plt.imshow(GC[idx], origin="lower", aspect="auto")
+            plt.title("Original")
+
+            plt.subplot(n,2,2*i+ 2)
+            plt.imshow(model(GC[idx].unsqueeze(0).to(device)).squeeze(0).cpu().detach().numpy(),
+                origin="lower",
+                aspect="auto")
+            plt.title("Reconstruction")
+    model.train()
+
+
 if __name__=="__main__":
-    GC = GuitarChord(files="ukulele_sample_pack/*.wav", process=True)
+
+    parser = argparse.ArgumentParser(description="Final model training")
+    parser.add_argument("--epoch", type=int, default=100, help="Number of epochs")
+    args = parser.parse_args()
+
+    GC = AudioDataset(files="ukulele_sample_pack/*.wav", process=True)
     GCloader = data.DataLoader(GC, batch_size=8, shuffle=True, drop_last=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -187,7 +215,19 @@ if __name__=="__main__":
     print(device)
     torch.cuda.empty_cache()
 
-    #model = WAE().to(device)
-    model = torch.load("model_1000_epoch.pt")
+    #model = torch.load("model_1000_epoch.pt")
 
-    #
+    while 1:
+        model = WAE().to(device)
+        train(model, GCloader, 10)
+        show_me_how_good_model_is_learning(model, GC, 4)
+        plt.show()
+        if input("Restart ? [y/n]").lower() == "y":
+            continue
+        else:
+            break
+
+    train(model, GCloader, args.epoch, savefig=True)
+    show_me_how_good_model_is_learning(model, GC, 4)
+    plt.show()
+    torch.save(model, "model_%d_epoch.pt"%args.epoch)
