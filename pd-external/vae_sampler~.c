@@ -24,7 +24,7 @@
 // object definition
 //-----------------------------------------------------------------
 
-const int SAMPLE_BUFFER_SIZE = 34560;
+#define SAMPLE_BUFFER_SIZE 34560
 
 typedef struct vae_sampler_t
 {

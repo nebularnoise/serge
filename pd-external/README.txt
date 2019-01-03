@@ -27,3 +27,11 @@ GNU make 3.81
 clang 900.0.39.2
 libtorch macos 1.0.0
 Pd vanilla 0.49.1
+
+Ubuntu 18.04.1 LTS
+cmake 3.10.2
+GNU Make 4.1
+gcc 7.3.0
+libtorch 1.0.0.dev20190103
+Pd vanilla 0.48.1
+
