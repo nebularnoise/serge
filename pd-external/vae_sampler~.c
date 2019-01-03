@@ -89,6 +89,9 @@ void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 
 void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float nu)
 {
+	float sr = sys_getsr();
+	nu /= sr;
+
 	DEBUG_POST("Fire : %f %f %f %f", c1, c2, c3, nu);
 
 	if(VaeModelGetSamples(x->model, SAMPLE_BUFFER_SIZE, x->buffer, c0, c1, c2, c3, nu))
