@@ -1,3 +1,11 @@
+Dependency
+----------
+
+libtorch can be found at https://pytorch.org
+
+Choose C++, select your system, then download the zip file and unzip it. (See caveats if you're on macOS)
+
+
 Building
 --------
 
@@ -14,7 +22,7 @@ Copy the external in the same folder as the libtorch directory and the testbed.p
 Caveats
 -------
 
-To link against torch, we have to manually add libiomp and libmkml to the libtorch/lib folder. These can be found here : https://github.com/intel/mkl-dnn/releases
+With the macOS version of libtorch, you have to manually add libiomp and libmkml to the libtorch/lib folder. These can be found here : https://github.com/intel/mkl-dnn/releases
 
 Currently, at least in the macOS version, you have to keep the external in the same folder as the libtorch package. You can use the external from any patch provided you correctly set the external search paths in PureData's preferences.
 
@@ -34,4 +42,3 @@ GNU Make 4.1
 gcc 7.3.0
 libtorch 1.0.0.dev20190103
 Pd vanilla 0.48.1
-
