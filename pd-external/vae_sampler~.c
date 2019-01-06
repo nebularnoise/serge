@@ -6,6 +6,7 @@
 //
 //*****************************************************************
 #include<stdlib.h>
+#include<string.h>
 #include"m_pd.h"
 #include"vae_util.h"
 
@@ -24,7 +25,19 @@
 // object definition
 //-----------------------------------------------------------------
 
-const int SAMPLE_BUFFER_SIZE = 34560;
+#define SAMPLE_BUFFER_SIZE 34560
+#define	VOICE_COUNT        16
+
+typedef int voice_head;
+const voice_head HEAD_PLAY_FLAG    = 1<<31,
+                 HEAD_COUNTER_MASK = ~(1<<31);
+
+typedef struct poly_voice_t
+{
+	float freq;
+	voice_head head;
+
+} poly_voice;
 
 typedef struct vae_sampler_t
 {
@@ -32,9 +45,10 @@ typedef struct vae_sampler_t
 	t_outlet*	out;
 
 	vae_model*	model;
-	int		play;
-	int		counter;
-	float		buffer[SAMPLE_BUFFER_SIZE];
+
+	int		nextVoice;
+	float		buffers[VOICE_COUNT][SAMPLE_BUFFER_SIZE];
+	poly_voice	voices[VOICE_COUNT];
 
 } vae_sampler;
 
@@ -49,23 +63,33 @@ t_int* vae_sampler_perform(t_int* w)
 	t_sample* out	= (t_sample*)w[2];
 	int n		= (int)w[3];
 
-	int i=0;
-	if(x->play)
+	memset(out, 0, n*sizeof(float));
+
+	for(int voiceIndex = 0; voiceIndex < VOICE_COUNT; voiceIndex++)
 	{
-		for(i=0; i<n && x->counter<SAMPLE_BUFFER_SIZE; i++)
+		float* buffer = x->buffers[voiceIndex];
+		poly_voice* voice = &x->voices[voiceIndex];
+		voice_head head = voice->head;
+
+		if(head & HEAD_PLAY_FLAG)
 		{
-			out[i] = x->buffer[x->counter];
-			x->counter++;
+			int counter = head & HEAD_COUNTER_MASK;
+
+			for(int i=0; i<n && counter<SAMPLE_BUFFER_SIZE; i++)
+			{
+				out[i] += buffer[counter];
+				counter++;
+			}
+			if(counter >= SAMPLE_BUFFER_SIZE)
+			{
+				voice->head = 0;
+				voice->freq = 0;
+			}
+			else
+			{
+				x->voices[voiceIndex].head = HEAD_PLAY_FLAG | counter;
+			}
 		}
-	}
-	for(; i<n; i++)
-	{
-		out[i] = 0;
-	}
-	if(x->counter >= SAMPLE_BUFFER_SIZE)
-	{
-		x->counter = 0;
-		x->play = 0;
 	}
 	return(w+4);
 }
@@ -87,19 +111,40 @@ void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 	}
 }
 
-void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float nu)
+void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float freq)
 {
+	float sr = sys_getsr();
+	float nu = freq/sr;
+
+	for(int i=0; i<VOICE_COUNT; i++)
+	{
+		if(x->voices[i].freq == freq)
+		{
+			//NOTE: the given freq is already playing... (we don't retrigger, but maybe we should ?)
+			return;
+		}
+	}
+
 	DEBUG_POST("Fire : %f %f %f %f", c1, c2, c3, nu);
 
-	if(VaeModelGetSamples(x->model, SAMPLE_BUFFER_SIZE, x->buffer, c0, c1, c2, c3, nu))
+	int voice = x->nextVoice;
+	float* buffer = x->buffers[voice];
+
+	if(VaeModelGetSamples(x->model, SAMPLE_BUFFER_SIZE, buffer, c0, c1, c2, c3, nu))
 	{
 		ERROR_POST("Failed to get samples from model...");
 	}
 	else
 	{
 		DEBUG_POST("Got samples from model");
-		x->counter = 0;
-		x->play = 1;
+
+		x->voices[voice].head = HEAD_PLAY_FLAG;
+		x->voices[voice].freq = freq;
+		x->nextVoice++;
+		if(x->nextVoice >= VOICE_COUNT)
+		{
+			x->nextVoice = 0;
+		}
 	}
 }
 
@@ -113,8 +158,10 @@ void* vae_sampler_new()
 
 	x->out = outlet_new(&x->obj, &s_signal);
 	x->model = VaeModelCreate();
-	x->play = 0;
-	x->counter = 0;
+
+	memset(x->buffers, 0, VOICE_COUNT*SAMPLE_BUFFER_SIZE*sizeof(float));
+	memset(x->voices, 0, VOICE_COUNT*sizeof(poly_voice));
+
 	return((void*)x);
 }
 
