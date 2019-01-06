@@ -209,6 +209,7 @@ if __name__=="__main__":
     parser = argparse.ArgumentParser(description="Final model training")
     parser.add_argument("--epoch", type=int, default=100, help="Number of epochs")
     parser.add_argument("--dataset", type=str, default=None, help="Location of dataset")
+    parser.add_argument("--lr-step", type=int, default=3, help="Number of division of lr over epoch")
     args = parser.parse_args()
 
     GC = AudioDataset(files="%s/*.wav" % args.dataset, process=True)
