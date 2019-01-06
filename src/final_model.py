@@ -151,7 +151,7 @@ def compute_mmd(x, y):
     mmd = x_kernel.mean() + y_kernel.mean() - 2*xy_kernel.mean()
     return mmd
 
-def train(model, GCloader, epoch, savefig=False):
+def train(model, GCloader, epoch, savefig=False, lr_rate=3):
     model.train()
     lr = 1e-3
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
@@ -179,7 +179,7 @@ def train(model, GCloader, epoch, savefig=False):
                 show_me_how_good_model_is_learning(model, GC, 4)
                 plt.savefig("output/epoch_%d.png"%e)
 
-        if (e+1)%(epoch//3)==0:
+        if (e+1)%(epoch//lr_rate)==0:
             lr /= 2.
             optimizer = torch.optim.Adam(model.parameters(),lr=lr)
 
@@ -234,7 +234,7 @@ if __name__=="__main__":
 
     model = WAE().to(device)
 
-    train(model, GCloader, args.epoch, savefig=True)
+    train(model, GCloader, args.epoch, savefig=True, lr_rate=args.lr_step)
     # show_me_how_good_model_is_learning(model, GC, 4)
     # plt.show()
     torch.save(model, "model_%d_epoch.pt"%args.epoch)
