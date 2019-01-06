@@ -22,7 +22,11 @@ def pad(x,n):
 
 maxv = np.iinfo(np.int16).max
 
-for i in range(len(peaks)-1):
+N = len(peaks)-1
+
+for i in range(N):
+    if i%(N//10)==0:
+        print("{:02d}\% done".format(int(i/N*10)), end="\r")
     signal = pad(x[peaks[i]:peaks[i+1]-fs//10],34560)
     n      = len(signal)
     y      = np.zeros(34560)
