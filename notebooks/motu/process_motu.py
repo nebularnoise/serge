@@ -26,5 +26,5 @@ for i in range(len(peaks)-1):
     signal = pad(x[peaks[i]:peaks[i+1]-fs//10],34560)
     n      = len(signal)
     y      = np.zeros(34560)
-    y[fs//10:] = signal[:-fs//10]
+    y[3*fs//10:] = signal[:-3*fs//10]
     li.output.write_wav("motu_dataset/motu_sample_{:03d}.wav".format(i), y, sr=fs, norm=True)

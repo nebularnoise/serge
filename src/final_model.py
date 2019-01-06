@@ -5,6 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import librosa as li
 from glob import glob
+from os import system
 import argparse
 
 class AudioDataset(data.Dataset):
@@ -203,11 +204,14 @@ def show_me_how_good_model_is_learning(model, GC, n):
 
 if __name__=="__main__":
 
+    system("mkdir output")
+
     parser = argparse.ArgumentParser(description="Final model training")
     parser.add_argument("--epoch", type=int, default=100, help="Number of epochs")
+    parser.add_argument("--dataset", type=str, default=None, help="Location of dataset")
     args = parser.parse_args()
 
-    GC = AudioDataset(files="ukulele_sample_pack/*.wav", process=True)
+    GC = AudioDataset(files="%s/*.wav" % args.dataset, process=True)
     GCloader = data.DataLoader(GC, batch_size=8, shuffle=True, drop_last=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -217,17 +221,19 @@ if __name__=="__main__":
 
     #model = torch.load("model_1000_epoch.pt")
 
-    while 1:
-        model = WAE().to(device)
-        train(model, GCloader, 10)
-        show_me_how_good_model_is_learning(model, GC, 4)
-        plt.show()
-        if input("Restart ? [y/n]").lower() == "y":
-            continue
-        else:
-            break
+    # while 1:
+    #     model = WAE().to(device)
+    #     train(model, GCloader, 10)
+    #     show_me_how_good_model_is_learning(model, GC, 4)
+    #     plt.show()
+    #     if input("Restart ? [y/n]").lower() == "y":
+    #         continue
+    #     else:
+    #         break
+
+    model = WAE().to(device)
 
     train(model, GCloader, args.epoch, savefig=True)
-    show_me_how_good_model_is_learning(model, GC, 4)
-    plt.show()
+    # show_me_how_good_model_is_learning(model, GC, 4)
+    # plt.show()
     torch.save(model, "model_%d_epoch.pt"%args.epoch)
