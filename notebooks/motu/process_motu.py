@@ -26,7 +26,7 @@ N = len(peaks)-1
 
 for i in range(N):
     if i%(N//10)==0:
-        print("{:02d}\% done".format(int(i/N*10)), end="\r")
+        print("{:02d} done".format(int(i/N*100)), end="\r")
     signal = pad(x[peaks[i]:peaks[i+1]-fs//10],34560)
     n      = len(signal)
     y      = np.zeros(34560)
