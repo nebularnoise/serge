@@ -173,6 +173,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3):
             optimizer.step()
             torch.cuda.empty_cache()
 
+        print("     epoch {} done".format(e), end="\r")
         if e%(epoch//10)==0:
             print("EPOCH %d, ERROR %f" % (e,error))
             if savefig:
