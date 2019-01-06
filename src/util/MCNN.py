@@ -1,6 +1,3 @@
-
-
-
 import os
 import numpy as np
 import torch
@@ -52,9 +49,9 @@ def save_def(seed,mname,mpath,instruments,style,n_ep,batch,lr,lr_decay,lr_step,o
     return model_def
 
 def build_pretrainedMCNN(mname,mpath,build_flag,device,eval_mod,n_ep=None):
-    
+
     model_def = np.load(mpath+mname+'_definition.npy').item()
-    
+
     instruments = model_def['instruments']
     style = model_def['style']
     if n_ep is None:
@@ -63,7 +60,7 @@ def build_pretrainedMCNN(mname,mpath,build_flag,device,eval_mod,n_ep=None):
         print('importing final training epoch = '+str(n_ep))
     else:
         print('importing intermediate training epoch = '+str(n_ep))
-    
+
     n_conv = model_def['n_conv']
     chan_down = model_def['chan_down']
     width_up = model_def['width_up']
@@ -81,7 +78,7 @@ def build_pretrainedMCNN(mname,mpath,build_flag,device,eval_mod,n_ep=None):
         mag_thr = model_def['mag_thr']
     else:
         mag_thr = None
-    
+
     if build_flag==1:
         MCNN = MCNN_net(n_conv,chan_down,width_up,padding_in,n_heads,n_MCNN,n_sig_out,stride_up,bn)
         MCNN.to(device)
@@ -96,7 +93,7 @@ def build_pretrainedMCNN(mname,mpath,build_flag,device,eval_mod,n_ep=None):
             MCNN.eval()
     else:
         MCNN = None
-    
+
     return MCNN,model_def,instruments,style,n_ep,log_scaling,mag_thr
 
 
@@ -106,27 +103,27 @@ def build_pretrainedMCNN(mname,mpath,build_flag,device,eval_mod,n_ep=None):
 def mag_loss(input_amp,output_amp,lambda_SC,lambda_logmag,eps):
     # xx_amp is magnitude (possibly mapped on mel scale)
     # the losses are scaled by input magnitude
-    
+
     ### Compute log magnitude differences
     log_stft_mag_diff = torch.sum(torch.abs(torch.log(input_amp + eps) - torch.log(output_amp + eps)), (1,2))
     log_stft_ref = torch.sum(torch.abs(torch.log(input_amp + eps)), (1,2))
     log_stft_mag = torch.mean(log_stft_mag_diff/(log_stft_ref + eps))
-    
+
     total_loss = lambda_logmag * log_stft_mag
-    
+
     if lambda_SC!=0:
         ### Compute spectral convergence
         frobenius_diff = torch.sqrt(torch.sum(torch.pow(input_amp - output_amp,2),(1,2)))
-        
+
         frobenius_input_amp = torch.sqrt(torch.sum(torch.pow(input_amp,2),(1,2)))
         spectral_convergence = torch.mean(frobenius_diff/(frobenius_input_amp))
-        
+
         # it goes inf or very high --> normalize by dimensionnality instead of input amp ...
         #spectral_convergence = torch.mean(frobenius_diff/(input_amp.shape[1]*input_amp.shape[2]))
         total_loss += lambda_SC * spectral_convergence
     else:
         spectral_convergence = torch.tensor([0.])
-    
+
     return total_loss,(lambda_SC*spectral_convergence).detach().item(),(lambda_logmag*log_stft_mag).detach().item()
 
 
@@ -178,23 +175,23 @@ class MCNN_net(nn.Module):
 #### DATA UTILS
 
 def datasets_tr_ev_test(data_path,instruments,inst_ref,n_sig_out,style):
-    
+
     print('importing data from '+data_path)
-    
+
     train_sig_slices = []
     train_labels = []
     eval_sig_slices = []
     eval_labels = []
     test_sig_slices = []
     test_labels = []
-    
+
     for inst in instruments:
         print('importing '+inst_ref[inst][0])
-        
+
         train_slices = 0
         eval_slices = 0
         test_slices = 0
-        
+
         train_dic = np.load(data_path+inst_ref[inst][0]+'_traindic.npy').item()
         # should contain {file_id:[np(waveform),[labels],'file_name']}
         # labels == [file_id,inst_id,pitch,octave]
@@ -207,11 +204,11 @@ def datasets_tr_ev_test(data_path,instruments,inst_ref,n_sig_out,style):
             if (np.sum(np.isinf(signal)*1)>0):
                 print('signal has inf',train_dic[file_id][2])
                 rainbow
-            
+
             if signal.size>=n_sig_out:
                 N_slices = int(np.floor(signal.size/n_sig_out))
                 train_slices += N_slices
-                
+
                 signal_slice = torch.from_numpy(signal[:N_slices*n_sig_out]).view(N_slices,n_sig_out).type(torch.float)
                 if style==0:
                     labels_t = torch.zeros(N_slices,3).type(torch.long)
@@ -222,12 +219,12 @@ def datasets_tr_ev_test(data_path,instruments,inst_ref,n_sig_out,style):
                 labels_t[:,2] = labels[3]
                 if style==1:
                     labels_t[:,3] = labels[4]
-                
+
                 train_sig_slices.append(signal_slice)
                 train_labels.append(labels_t)
             #else:
                 #print('too short, discarded',train_dic[file_id][2])
-        
+
         eval_dic = np.load(data_path+inst_ref[inst][0]+'_evaldic.npy').item()
         for file_id in eval_dic.keys():
             labels = eval_dic[file_id][1]
@@ -238,11 +235,11 @@ def datasets_tr_ev_test(data_path,instruments,inst_ref,n_sig_out,style):
             if (np.sum(np.isinf(signal)*1)>0):
                 print('signal has inf',eval_dic[file_id][2])
                 rainbow
-            
+
             if signal.size>=n_sig_out:
                 N_slices = int(np.floor(signal.size/n_sig_out))
                 eval_slices += N_slices
-                
+
                 signal_slice = torch.from_numpy(signal[:N_slices*n_sig_out]).view(N_slices,n_sig_out).type(torch.float)
                 if style==0:
                     labels_t = torch.zeros(N_slices,3).type(torch.long)
@@ -253,12 +250,12 @@ def datasets_tr_ev_test(data_path,instruments,inst_ref,n_sig_out,style):
                 labels_t[:,2] = labels[3]
                 if style==1:
                     labels_t[:,3] = labels[4]
-                
+
                 eval_sig_slices.append(signal_slice)
                 eval_labels.append(labels_t)
             #else:
                 #print('too short, discarded',eval_dic[file_id][2])
-        
+
         test_dic = np.load(data_path+inst_ref[inst][0]+'_testdic.npy').item()
         for file_id in test_dic.keys():
             labels = test_dic[file_id][1]
@@ -269,11 +266,11 @@ def datasets_tr_ev_test(data_path,instruments,inst_ref,n_sig_out,style):
             if (np.sum(np.isinf(signal)*1)>0):
                 print('signal has inf',test_dic[file_id][2])
                 rainbow
-            
+
             if signal.size>=n_sig_out:
                 N_slices = int(np.floor(signal.size/n_sig_out))
                 test_slices += N_slices
-                
+
                 signal_slice = torch.from_numpy(signal[:N_slices*n_sig_out]).view(N_slices,n_sig_out).type(torch.float)
                 if style==0:
                     labels_t = torch.zeros(N_slices,3).type(torch.long)
@@ -284,31 +281,31 @@ def datasets_tr_ev_test(data_path,instruments,inst_ref,n_sig_out,style):
                 labels_t[:,2] = labels[3]
                 if style==1:
                     labels_t[:,3] = labels[4]
-                
+
                 test_sig_slices.append(signal_slice)
                 test_labels.append(labels_t)
             #else:
                 #print('too short, discarded',test_dic[file_id][2])
-        
+
         print('instrument train/eval/test',train_slices,eval_slices,test_slices)
-    
+
     train_sig_slices = torch.cat(train_sig_slices,dim=0)
     train_labels = torch.cat(train_labels,dim=0)
-    
+
     eval_sig_slices = torch.cat(eval_sig_slices,dim=0)
     eval_labels = torch.cat(eval_labels,dim=0)
-    
+
     test_sig_slices = torch.cat(test_sig_slices,dim=0)
     test_labels = torch.cat(test_labels,dim=0)
-    
+
     N_train = train_sig_slices.shape[0]
     N_eval = eval_sig_slices.shape[0]
     N_test = test_sig_slices.shape[0]
-    
+
     train_dataset = torch.utils.data.TensorDataset(train_sig_slices,train_labels)
     eval_dataset = torch.utils.data.TensorDataset(eval_sig_slices,eval_labels)
     test_dataset = torch.utils.data.TensorDataset(test_sig_slices,test_labels)
-    
+
     print('N_train/N_eval/N_test  ',N_train,N_eval,N_test)
-    
+
     return [train_dataset,eval_dataset,test_dataset],[N_train,N_eval,N_test]
