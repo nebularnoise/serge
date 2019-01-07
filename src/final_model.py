@@ -22,7 +22,8 @@ class AudioDataset(data.Dataset):
                 [x,fs] = li.load(elm, sr=22050)
                 x = self.pad(x,34560)
                 mel = li.filters.mel(fs,2048,500)
-                S = torch.from_numpy(mel.dot(abs(li.stft(x,n_fft=2048,win_length=2048, hop_length=256, center=False)))).float()
+                S = torch.from_numpy(mel.dot(abs(li.stft(x,n_fft=2048,
+                win_length=2048, hop_length=256, center=False)))).float()
                 S = S/torch.max(S)
                 torch.save(S,elm.replace(".wav",".pt"))
             print("Done!")
@@ -223,12 +224,13 @@ if __name__=="__main__":
     parser.add_argument("--lr-step", type=int, default=3, help="Number of division of lr over epoch")
     parser.add_argument("--zdim", type=int, default=32, help="Dimension of latent space")
     parser.add_argument("--n-trames", type=int, default="128", help="Processes n_trames. Must be a power of 2 >= 32")
+    parser.add_argument("--cuda", type=int, default=0, help="CUDA device to be used")
     args = parser.parse_args()
 
     GC = AudioDataset(files="%s/*.wav" % args.dataset, process=True, slice_size=args.n_trames)
     GCloader = data.DataLoader(GC, batch_size=8, shuffle=True, drop_last=True)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:{}".format(args.cuda) if torch.cuda.is_available() else "cpu")
     #device = torch.device("cpu")
     print(device)
     torch.cuda.empty_cache()
