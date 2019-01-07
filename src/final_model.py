@@ -9,11 +9,16 @@ from os import system
 import argparse
 
 class AudioDataset(data.Dataset):
-    def __init__(self, files, process):
+    def __init__(self, files, process, slice_size):
+        self.slice_size = slice_size
+        self.division = 128 // slice_size
         self.liste = glob(files)
         if process:
-            print("Preprocessing stuff... ", end="")
-            for elm in self.liste:
+            print("Preprocessing stuff... ")
+            print("           !", end="\r")
+            for i,elm in enumerate(self.liste):
+                if i%(len(self.liste)//10)==0:
+                    print("=", end="", flush=True)
                 [x,fs] = li.load(elm, sr=22050)
                 x = self.pad(x,34560)
                 mel = li.filters.mel(fs,2048,500)
@@ -23,10 +28,11 @@ class AudioDataset(data.Dataset):
             print("Done!")
 
     def __getitem__(self,i):
-        return torch.load(self.liste[i].replace(".wav",".pt"))
+        stft = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
+        return stft[:, (i%self.division)*self.slice_size:(i%self.division+1)*self.slice_size]
 
     def __len__(self):
-        return len(self.liste)
+        return len(self.liste)*self.division
 
     def pad(self,x,n):
         m = len(x)
@@ -36,10 +42,13 @@ class AudioDataset(data.Dataset):
             return x[:n]
 
 class WAE(nn.Module):
-    def __init__(self):
+    def __init__(self, zdim, n_trames):
         super(WAE,self).__init__()
         size = [1, 16, 32, 64, 128, 256]
-        zdim = 32
+
+        self.flat_number = int(256*16*n_trames/32)
+        self.n_trames = n_trames
+        #print(self.flat_number)
 
         self.act = nn.LeakyReLU()
 
@@ -49,7 +58,7 @@ class WAE(nn.Module):
         self.enc4 = nn.Conv2d(size[3],size[4],stride=2, kernel_size=5, padding=2)
         self.enc5 = nn.Conv2d(size[4],size[5],stride=2, kernel_size=5, padding=2)
 
-        self.lin1 = nn.Linear(256*16*4, 1024)
+        self.lin1 = nn.Linear(self.flat_number, 1024)
         self.lin2 = nn.Linear(1024, 256)
         self.lin3 = nn.Linear(256, zdim)
 
@@ -61,7 +70,7 @@ class WAE(nn.Module):
         self.dec4 = nn.ConvTranspose2d(size[4],size[3],stride=2, kernel_size=5, padding=2)
         self.dec5 = nn.ConvTranspose2d(size[5],size[4],stride=2, kernel_size=5, padding=2)
 
-        self.dlin1 = nn.Linear(1024,256*16*4)
+        self.dlin1 = nn.Linear(1024, self.flat_number)
         self.dlin2 = nn.Linear(256,1024)
         self.dlin3 = nn.Linear(zdim,256)
 
@@ -87,7 +96,7 @@ class WAE(nn.Module):
                                   self.dlin2,
                                   nn.BatchNorm1d(num_features=1024), self.act,
                                   self.dlin1,
-                                  nn.BatchNorm1d(num_features=256*16*4), self.act)
+                                  nn.BatchNorm1d(num_features=self.flat_number), self.act)
 
         self.f4   = nn.Sequential(self.dec5,
                                  nn.BatchNorm2d(num_features=size[4]), self.act,
@@ -116,15 +125,16 @@ class WAE(nn.Module):
         inp = self.f1(inp)
         #print(inp.size())
         inp = self.flatten(inp)
+        #print(inp.size())
         inp = self.f2(inp)
         return inp
 
     def decode(self, inp):
         #print(inp.size())
         inp = self.f3(inp)
-        inp = inp.view(-1, 256, 16, 4)
+        inp = inp.view(-1, 256, 16, self.n_trames//32)
         inp = self.f4(inp)
-        inp = nn.functional.interpolate(inp, size=(500,128))
+        inp = nn.functional.interpolate(inp, size=(500,self.n_trames))
         inp = self.decf(inp)
         inp = torch.sigmoid(inp)
         return inp.squeeze(1)
@@ -211,9 +221,11 @@ if __name__=="__main__":
     parser.add_argument("--epoch", type=int, default=100, help="Number of epochs")
     parser.add_argument("--dataset", type=str, default=None, help="Location of dataset")
     parser.add_argument("--lr-step", type=int, default=3, help="Number of division of lr over epoch")
+    parser.add_argument("--zdim", type=int, default=32, help="Dimension of latent space")
+    parser.add_argument("--n-trames", type=int, default="128", help="Processes n_trames. Must be a power of 2 >= 32")
     args = parser.parse_args()
 
-    GC = AudioDataset(files="%s/*.wav" % args.dataset, process=True)
+    GC = AudioDataset(files="%s/*.wav" % args.dataset, process=True, slice_size=args.n_trames)
     GCloader = data.DataLoader(GC, batch_size=8, shuffle=True, drop_last=True)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -221,19 +233,7 @@ if __name__=="__main__":
     print(device)
     torch.cuda.empty_cache()
 
-    #model = torch.load("model_1000_epoch.pt")
-
-    # while 1:
-    #     model = WAE().to(device)
-    #     train(model, GCloader, 10)
-    #     show_me_how_good_model_is_learning(model, GC, 4)
-    #     plt.show()
-    #     if input("Restart ? [y/n]").lower() == "y":
-    #         continue
-    #     else:
-    #         break
-
-    model = WAE().to(device)
+    model = WAE(args.zdim, args.n_trames).to(device)
 
     train(model, GCloader, args.epoch, savefig=True, lr_rate=args.lr_step)
     # show_me_how_good_model_is_learning(model, GC, 4)
