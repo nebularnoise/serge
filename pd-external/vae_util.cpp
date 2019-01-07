@@ -3,7 +3,6 @@
 //	$file: vae_util.cpp $
 //	$date: 02/01/2019 $
 //	$revision: $
-//	$note: (C) 2019 by Martin Fouilleul - all rights reserved $
 //
 //*****************************************************************
 #include<torch/script.h>

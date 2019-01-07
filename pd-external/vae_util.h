@@ -1,10 +1,8 @@
 //*****************************************************************
 //
 //	$file: vae_util.h $
-//	$author: Martin Fouilleul $
 //	$date: 02/01/2019 $
 //	$revision: $
-//	$note: (C) 2019 by Martin Fouilleul - all rights reserved $
 //
 //*****************************************************************
 #ifndef __VAE_UTIL_H_
