@@ -32,7 +32,7 @@ class AudioDataset(data.Dataset):
                 tmin = fs//fmax
                 tmax = fs//fmin
 
-                f = 1/(np.argmax(xx[tmin:tmax])+tmin)
+                f = li.core.hz_to_mel(fs/(np.argmax(xx[tmin:tmax])+tmin))
                 f = torch.from_numpy(np.asarray(f)).float()
                 S = S/torch.max(S),f
 
@@ -229,10 +229,12 @@ def show_me_how_good_model_is_learning(model, GC, n):
     for i in range(n):
         plt.subplot(n,2,2*i + 1)
         plt.imshow(spectrogram[i,:,:], origin="lower", aspect="auto", vmin=0, vmax=1)
+        plt.colorbar()
         plt.title("Original")
 
         plt.subplot(n,2,2*i+ 2)
         plt.imshow(rec[i,:,:], origin="lower", aspect="auto", vmin=0, vmax=1)
+        plt.colorbar()
         plt.title("Reconstruction")
     model.train()
 
