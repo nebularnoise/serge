@@ -24,13 +24,24 @@ class AudioDataset(data.Dataset):
                 mel = li.filters.mel(fs,2048,500)
                 S = torch.from_numpy(mel.dot(abs(li.stft(x,n_fft=2048,
                 win_length=2048, hop_length=256, center=False)))).float()
-                S = S/torch.max(S)
+                # fundamental frequency estimation by autocorrelation method
+                xx = np.correlate(x,x, mode="full")[len(x):]
+                fmin = 100
+                fmax = 2000
+
+                tmin = fs//fmax
+                tmax = fs//fmin
+
+                f = 1/(np.argmax(xx[tmin:tmax])+tmin)
+
+                S = S/torch.max(S),f
+
                 torch.save(S,elm.replace(".wav",".pt"))
             print("Done!")
 
     def __getitem__(self,i):
-        stft = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
-        return stft[:, (i%self.division)*self.slice_size:(i%self.division+1)*self.slice_size]
+        stft,f = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
+        return stft[:, (i%self.division)*self.slice_size:(i%self.division+1)*self.slice_size],f
 
     def __len__(self):
         return len(self.liste)*self.division
@@ -73,7 +84,7 @@ class WAE(nn.Module):
 
         dlin1 = nn.Linear(1024, self.flat_number)
         dlin2 = nn.Linear(256,1024)
-        dlin3 = nn.Linear(zdim,256)
+        dlin3 = nn.Linear(zdim+1,256)
 
         self.f1   = nn.Sequential(enc1,
                                 nn.BatchNorm2d(num_features=size[1]),act,
@@ -141,8 +152,8 @@ class WAE(nn.Module):
         return inp.squeeze(1)
 
 
-    def forward(self,inp):
-        return self.decode(self.encode(inp))
+    #def forward(self,inp):
+    #    return self.decode(self.encode(inp))
 
 def compute_kernel(x, y):
     x_size = x.size(0)
