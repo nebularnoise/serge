@@ -248,9 +248,10 @@ if __name__=="__main__":
     parser.add_argument("--n-trames", type=int, default="128", help="Processes n_trames. Must be a power of 2 >= 32")
     parser.add_argument("--cuda", type=int, default=0, help="CUDA device to be used")
     parser.add_argument("--nb-update", type=int, default=10, help="Number of update / backup to do")
+    parser.add_argument("--process-dataset", type=int, default=0, help="1/0 if Preprocessing needed")
     args = parser.parse_args()
 
-    GC = AudioDataset(files="%s/*.wav" % args.dataset, process=True, slice_size=args.n_trames)
+    GC = AudioDataset(files="%s/*.wav" % args.dataset, process=args.process_dataset, slice_size=args.n_trames)
     GCloader = data.DataLoader(GC, batch_size=8, shuffle=True, drop_last=True)
 
     device = torch.device("cuda:{}".format(args.cuda) if torch.cuda.is_available() else "cpu")
