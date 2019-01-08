@@ -33,7 +33,7 @@ class AudioDataset(data.Dataset):
                 tmax = fs//fmin
 
                 f = 1/(np.argmax(xx[tmin:tmax])+tmin)
-
+                f = torch.from_numpy(np.asarray(f)).float()
                 S = S/torch.max(S),f
 
                 torch.save(S,elm.replace(".wav",".pt"))
@@ -141,8 +141,9 @@ class WAE(nn.Module):
         inp = self.f2(inp)
         return inp
 
-    def decode(self, inp):
+    def decode(self, inp, f):
         #print(inp.size())
+        inp = torch.cat([inp, f], 1)
         inp = self.f3(inp)
         inp = inp.view(-1, 256, 16, self.n_trames//32)
         inp = self.f4(inp)
@@ -152,8 +153,8 @@ class WAE(nn.Module):
         return inp.squeeze(1)
 
 
-    #def forward(self,inp):
-    #    return self.decode(self.encode(inp))
+    def forward(self,inp, f):
+        return self.decode(self.encode(inp),f)
 
 def compute_kernel(x, y):
     x_size = x.size(0)
@@ -179,15 +180,16 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
     loss = torch.nn.modules.BCELoss()
     for e in range(epoch):
-        for idx, minibatch in enumerate(GCloader):
+        for idx, (minibatch,f) in enumerate(GCloader):
 
             minibatch = minibatch.to(device)
+            f = f.to(device).unsqueeze(1)
 
             optimizer.zero_grad()
 
             z = model.encode(minibatch)
 
-            rec = model.decode(z)
+            rec = model.decode(z,f)
 
             error = loss(rec,minibatch) + compute_mmd(z,torch.randn_like(z))
 
@@ -210,19 +212,28 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 def show_me_how_good_model_is_learning(model, GC, n):
     model.eval()
     N = len(GC)
+
+    dataset = data.DataLoader(GC, shuffle=True, batch_size=n)
+
     with torch.no_grad():
         plt.figure(figsize=(20,25))
-        for i in range(n):
-            idx = np.random.randint(N)
-            plt.subplot(n,2,2*i + 1)
-            plt.imshow(GC[idx], origin="lower", aspect="auto")
-            plt.title("Original")
 
-            plt.subplot(n,2,2*i+ 2)
-            plt.imshow(model(GC[idx].unsqueeze(0).to(device)).squeeze(0).cpu().detach().numpy(),
-                origin="lower",
-                aspect="auto")
-            plt.title("Reconstruction")
+        spectrogram, frequency = next(iter(dataset))
+
+        frequency = frequency.to(device).unsqueeze(1)
+        spectrogram = spectrogram.to(device)
+
+        rec = model(spectrogram, frequency).cpu().numpy()
+        spectrogram = spectrogram.cpu().numpy()
+
+    for i in range(n):
+        plt.subplot(n,2,2*i + 1)
+        plt.imshow(spectrogram[i,:,:], origin="lower", aspect="auto", vmin=0, vmax=1)
+        plt.title("Original")
+
+        plt.subplot(n,2,2*i+ 2)
+        plt.imshow(rec[i,:,:], origin="lower", aspect="auto", vmin=0, vmax=1)
+        plt.title("Reconstruction")
     model.train()
 
 
@@ -239,7 +250,7 @@ if __name__=="__main__":
     parser.add_argument("--nb-update", type=int, default=10, help="Number of update / backup to do")
     args = parser.parse_args()
 
-    GC = AudioDataset(files="%s/*.wav" % args.dataset, process=True, slice_size=args.n_trames)
+    GC = AudioDataset(files="%s/*.wav" % args.dataset, process=False, slice_size=args.n_trames)
     GCloader = data.DataLoader(GC, batch_size=8, shuffle=True, drop_last=True)
 
     device = torch.device("cuda:{}".format(args.cuda) if torch.cuda.is_available() else "cpu")
