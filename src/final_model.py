@@ -162,7 +162,7 @@ def compute_mmd(x, y):
     mmd = x_kernel.mean() + y_kernel.mean() - 2*xy_kernel.mean()
     return mmd
 
-def train(model, GCloader, epoch, savefig=False, lr_rate=3):
+def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
     model.train()
     lr = 1e-3
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
@@ -185,7 +185,8 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3):
             torch.cuda.empty_cache()
 
         print("     epoch {} done".format(e), end="\r")
-        if e%(epoch//10)==0:
+        if e%(epoch//nb_update)==0:
+            torch.save(model, "output/model_%d_epoch.pt" % e)
             print("EPOCH %d, ERROR %f" % (e,error))
             if savefig:
                 show_me_how_good_model_is_learning(model, GC, 4)
@@ -215,7 +216,6 @@ def show_me_how_good_model_is_learning(model, GC, n):
 
 
 if __name__=="__main__":
-
     system("mkdir output")
 
     parser = argparse.ArgumentParser(description="Final model training")
@@ -225,6 +225,7 @@ if __name__=="__main__":
     parser.add_argument("--zdim", type=int, default=32, help="Dimension of latent space")
     parser.add_argument("--n-trames", type=int, default="128", help="Processes n_trames. Must be a power of 2 >= 32")
     parser.add_argument("--cuda", type=int, default=0, help="CUDA device to be used")
+    parser.add_argument("--nb-update", type=int, default=10, help="Number of update / backup to do")
     args = parser.parse_args()
 
     GC = AudioDataset(files="%s/*.wav" % args.dataset, process=True, slice_size=args.n_trames)
@@ -237,7 +238,8 @@ if __name__=="__main__":
 
     model = WAE(args.zdim, args.n_trames).to(device)
 
-    train(model, GCloader, args.epoch, savefig=True, lr_rate=args.lr_step)
+    train(model, GCloader, args.epoch, savefig=True, lr_rate=args.lr_step,
+        nb_update=args.nb_update)
     # show_me_how_good_model_is_learning(model, GC, 4)
     # plt.show()
     torch.save(model, "model_%d_epoch.pt"%args.epoch)
