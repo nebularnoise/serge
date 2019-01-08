@@ -51,65 +51,65 @@ class WAE(nn.Module):
         self.n_trames = n_trames
         #print(self.flat_number)
 
-        self.act = nn.LeakyReLU()
+        act = nn.LeakyReLU()
 
-        self.enc1 = nn.Conv2d(size[0],size[1],stride=2, kernel_size=5, padding=2)
-        self.enc2 = nn.Conv2d(size[1],size[2],stride=2, kernel_size=5, padding=2)
-        self.enc3 = nn.Conv2d(size[2],size[3],stride=2, kernel_size=5, padding=2)
-        self.enc4 = nn.Conv2d(size[3],size[4],stride=2, kernel_size=5, padding=2)
-        self.enc5 = nn.Conv2d(size[4],size[5],stride=2, kernel_size=5, padding=2)
+        enc1 = nn.Conv2d(size[0],size[1],stride=2, kernel_size=5, padding=2)
+        enc2 = nn.Conv2d(size[1],size[2],stride=2, kernel_size=5, padding=2)
+        enc3 = nn.Conv2d(size[2],size[3],stride=2, kernel_size=5, padding=2)
+        enc4 = nn.Conv2d(size[3],size[4],stride=2, kernel_size=5, padding=2)
+        enc5 = nn.Conv2d(size[4],size[5],stride=2, kernel_size=5, padding=2)
 
-        self.lin1 = nn.Linear(self.flat_number, 1024)
-        self.lin2 = nn.Linear(1024, 256)
-        self.lin3 = nn.Linear(256, zdim)
+        lin1 = nn.Linear(self.flat_number, 1024)
+        lin2 = nn.Linear(1024, 256)
+        lin3 = nn.Linear(256, zdim)
 
         self.decf = nn.Conv2d(1,1,stride=1, kernel_size=3, padding=1)
-        self.dec0 = nn.ConvTranspose2d(size[0],size[0],stride=2, kernel_size=5, padding=2)
-        self.dec1 = nn.ConvTranspose2d(size[1],size[0],stride=2, kernel_size=5, padding=2)
-        self.dec2 = nn.ConvTranspose2d(size[2],size[1],stride=2, kernel_size=5, padding=2)
-        self.dec3 = nn.ConvTranspose2d(size[3],size[2],stride=2, kernel_size=5, padding=2)
-        self.dec4 = nn.ConvTranspose2d(size[4],size[3],stride=2, kernel_size=5, padding=2)
-        self.dec5 = nn.ConvTranspose2d(size[5],size[4],stride=2, kernel_size=5, padding=2)
+        dec0 = nn.ConvTranspose2d(size[0],size[0],stride=2, kernel_size=5, padding=2)
+        dec1 = nn.ConvTranspose2d(size[1],size[0],stride=2, kernel_size=5, padding=2)
+        dec2 = nn.ConvTranspose2d(size[2],size[1],stride=2, kernel_size=5, padding=2)
+        dec3 = nn.ConvTranspose2d(size[3],size[2],stride=2, kernel_size=5, padding=2)
+        dec4 = nn.ConvTranspose2d(size[4],size[3],stride=2, kernel_size=5, padding=2)
+        dec5 = nn.ConvTranspose2d(size[5],size[4],stride=2, kernel_size=5, padding=2)
 
-        self.dlin1 = nn.Linear(1024, self.flat_number)
-        self.dlin2 = nn.Linear(256,1024)
-        self.dlin3 = nn.Linear(zdim,256)
+        dlin1 = nn.Linear(1024, self.flat_number)
+        dlin2 = nn.Linear(256,1024)
+        dlin3 = nn.Linear(zdim,256)
 
-        self.f1   = nn.Sequential(self.enc1,
-                                nn.BatchNorm2d(num_features=size[1]),self.act,
-                                self.enc2,
-                                nn.BatchNorm2d(num_features=size[2]),self.act,
-                                self.enc3,
-                                nn.BatchNorm2d(num_features=size[3]),self.act,
-                                self.enc4,
-                                nn.BatchNorm2d(num_features=size[4]),self.act,
-                                self.enc5,
-                                nn.BatchNorm2d(num_features=size[5]),self.act)
+        self.f1   = nn.Sequential(enc1,
+                                nn.BatchNorm2d(num_features=size[1]),act,
+                                enc2,
+                                nn.BatchNorm2d(num_features=size[2]),act,
+                                enc3,
+                                nn.BatchNorm2d(num_features=size[3]),act,
+                                enc4,
+                                nn.BatchNorm2d(num_features=size[4]),act,
+                                enc5,
+                                nn.BatchNorm2d(num_features=size[5]),act)
 
-        self.f2   = nn.Sequential(self.lin1,
-                                 nn.BatchNorm1d(num_features=1024),self.act,
-                                 self.lin2,
-                                 nn.BatchNorm1d(num_features=256),self.act,
-                                 self.lin3)
+        self.f2   = nn.Sequential(lin1,
+                                 nn.BatchNorm1d(num_features=1024),act,
+                                 lin2,
+                                 nn.BatchNorm1d(num_features=256),act,
+                                 lin3)
 
-        self.f3   = nn.Sequential(self.dlin3,
-                                  nn.BatchNorm1d(num_features=256), self.act,
-                                  self.dlin2,
-                                  nn.BatchNorm1d(num_features=1024), self.act,
-                                  self.dlin1,
-                                  nn.BatchNorm1d(num_features=self.flat_number), self.act)
+        self.f3   = nn.Sequential(dlin3,
+                                  nn.BatchNorm1d(num_features=256), act,
+                                  dlin2,
+                                  nn.BatchNorm1d(num_features=1024), act,
+                                  dlin1,
+                                  nn.BatchNorm1d(num_features=self.flat_number), act)
 
-        self.f4   = nn.Sequential(self.dec5,
-                                 nn.BatchNorm2d(num_features=size[4]), self.act,
-                                 self.dec4,
-                                 nn.BatchNorm2d(num_features=size[3]), self.act,
-                                 self.dec3,
-                                 nn.BatchNorm2d(num_features=size[2]), self.act,
-                                 self.dec2,
-                                 nn.BatchNorm2d(num_features=size[1]), self.act,
-                                 self.dec1,
-                                 nn.BatchNorm2d(num_features=size[0]), self.act,
-                                 self.dec0, nn.Sigmoid())
+        self.f4   = nn.Sequential(dec5,
+                                 nn.BatchNorm2d(num_features=size[4]), act,
+                                 dec4,
+                                 nn.BatchNorm2d(num_features=size[3]), act,
+                                 dec3,
+                                 nn.BatchNorm2d(num_features=size[2]), act,
+                                 dec2,
+                                 nn.BatchNorm2d(num_features=size[1]), act,
+                                 dec1,
+                                 nn.BatchNorm2d(num_features=size[0]), act,
+                                 dec0, nn.Sigmoid())
 
 
 
