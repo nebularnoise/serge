@@ -250,7 +250,7 @@ if __name__=="__main__":
     parser.add_argument("--nb-update", type=int, default=10, help="Number of update / backup to do")
     args = parser.parse_args()
 
-    GC = AudioDataset(files="%s/*.wav" % args.dataset, process=False, slice_size=args.n_trames)
+    GC = AudioDataset(files="%s/*.wav" % args.dataset, process=True, slice_size=args.n_trames)
     GCloader = data.DataLoader(GC, batch_size=8, shuffle=True, drop_last=True)
 
     device = torch.device("cuda:{}".format(args.cuda) if torch.cuda.is_available() else "cpu")
