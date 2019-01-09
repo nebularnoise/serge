@@ -45,7 +45,7 @@ class AudioDataset(data.Dataset):
                 f0 = torch.from_numpy(np.asarray(li.core.hz_to_mel(f0))).float()
 
                 torch.save((S,S_shifted,f0),elm.replace(".wav",".pt"))
-            print("Done!")
+            print("]\nDone!")
 
     def __getitem__(self,i):
         stft,shifted_stft,f = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
@@ -274,10 +274,11 @@ if __name__=="__main__":
     parser.add_argument("--cuda", type=int, default=0, help="CUDA device to be used")
     parser.add_argument("--nb-update", type=int, default=10, help="Number of update / backup to do")
     parser.add_argument("--process-dataset", type=int, default=0, help="1/0 if Preprocessing needed")
+    parser.add_argument("--batch-size", type=int, default=8, help="batch size")
     args = parser.parse_args()
 
     GC = AudioDataset(files="%s/*.wav" % args.dataset, process=args.process_dataset, slice_size=args.n_trames)
-    GCloader = data.DataLoader(GC, batch_size=8, shuffle=True, drop_last=True)
+    GCloader = data.DataLoader(GC, batch_size=args.batch_size, shuffle=True, drop_last=True)
 
     device = torch.device("cuda:{}".format(args.cuda) if torch.cuda.is_available() else "cpu")
     #device = torch.device("cpu")
