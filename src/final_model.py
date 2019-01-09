@@ -14,10 +14,11 @@ class AudioDataset(data.Dataset):
         self.division = 128 // slice_size
         self.liste = glob(files)
         if process:
-            print("Preprocessing stuff... ")
-            print("           !", end="\r")
+            print("Preprocessing audio dataset... ")
+            print("                      ]", end="\r")
+            print("[", end="")
             for i,elm in enumerate(self.liste):
-                if i%(len(self.liste)//10)==0:
+                if i%(len(self.liste)//20)==0:
                     print("=", end="", flush=True)
 
                 [x,fs] = li.load(elm, sr=22050)
@@ -33,13 +34,15 @@ class AudioDataset(data.Dataset):
                 tmin = fs//fmax
                 tmax = fs//fmin
 
-                f0 = li.core.hz_to_mel(fs/(np.argmax(xx[tmin:tmax])+tmin))
-                f0 = torch.from_numpy(np.asarray(f0)).float()
+                f0 = fs/(np.argmax(xx[tmin:tmax])+tmin)
+
 
 
                 S = S/torch.max(S)
 
                 S_shifted = self.shift(S, f0.item(), fs, 500)
+
+                f0 = torch.from_numpy(np.asarray(li.core.hz_to_mel(f0))).float()
 
                 torch.save((S,S_shifted,f0),elm.replace(".wav",".pt"))
             print("Done!")
@@ -63,11 +66,11 @@ class AudioDataset(data.Dataset):
     def shift(self,S,f0,fs,n_bin):
         mel        = np.linspace(li.core.hz_to_mel(0),li.core.hz_to_mel(fs/2), n_bin)
         freq       = li.core.mel_to_hz(mel)
-        bin_shift  = int(np.argmin(abs(freq-f0)) - 20)
+        bin_shift  = -int(np.argmin(abs(freq-f0)) - 20)
 
         S = torch.roll(S, bin_shift, 0)
 
-        S[n_bin-bin_shift:,:] = 0
+        S[n_bin+bin_shift:,:] = 0
 
         return S
 
@@ -195,7 +198,7 @@ def compute_mmd(x, y):
 
 def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
     model.train()
-    lr = 1e-3
+    lr = 5e-4
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
     loss = torch.nn.modules.BCELoss()
     for e in range(epoch):
