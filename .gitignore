@@ -19,4 +19,4 @@ notebooks/.ipynb_checkpoints/
 *.tar
 *.png
 *.pth
-*/bin
+bin/*
