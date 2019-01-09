@@ -8,103 +8,144 @@
 #include<math.h>
 #include<stdlib.h>
 #include<string.h>
+#include<assert.h>
 #include"fftw3.h"
-#include"griffin_lim.h"
 
-void GriffinLimSTFT(fftwf_plan plan, int fftSize, int hopSize, int sliceCount, float* window, float* signalIn, fftwf_complex* spectrogramOut, float* fftAlignedBuffer)
+void GriffinLimSTFT(fftwf_plan plan,
+		    int fftSize,
+		    int hopSize,
+		    int sliceCount,
+		    float* window,
+		    float* signalIn,
+		    fftwf_complex* spectrogramOut,
+		    float* fftScratchBuffer)
 {
 	//NOTE(martin): spectrogramOut and fftAlignedIn must have been allocated with fftwf_malloc() to ensure an alignement suitable to simd instructions
 
 	int start = 0;
-	int end = hopSize;
 	int sliceStart = 0;
 
 	for(int slice=0; slice<sliceCount; slice++)
 	{
 		for(int i=0; i<fftSize; i++)
 		{
-			fftAlignedBuffer[i] = signalIn[start+i]*window[i];
+			fftScratchBuffer[i] = signalIn[start+i]*window[i];
 		}
-		fftwf_execute_dft_r2c(plan, fftAlignedBuffer, spectrogramOut + sliceStart);
+		fftwf_execute_dft_r2c(plan, fftScratchBuffer, spectrogramOut + sliceStart);
 
-		sliceStart += fftSize;
+		sliceStart += (fftSize/2+1);
 		start += hopSize;
-		end += hopSize;
 	}
 }
 
-void GriffinLimISTFT(fftwf_plan plan, int fftSize, int hopSize, int sliceCount, float* window, fftwf_complex* spectrogramIn, float* signalOut, float* fftAlignedBuffer)
+void GriffinLimISTFT(fftwf_plan plan,
+		     int fftSize,
+		     int hopSize,
+		     int sliceCount,
+		     float* window,
+		     float windowGain,
+		     fftwf_complex* spectrogramIn,
+		     float* signalOut,
+		     float* fftScratchBuffer)
 {
 	int start = 0;
-	int end = hopSize;
 	int sliceStart = 0;
+
+	float normalize = 1./(windowGain*fftSize);
+
+	memset(signalOut, 0, (sliceCount*hopSize+fftSize)*sizeof(float));
 
 	for(int slice=0; slice<sliceCount; slice++)
 	{
-		fftwf_execute_dft_c2r(plan, spectrogramIn + sliceStart, fftAlignedBuffer);
+		memset(fftScratchBuffer, 0, fftSize*sizeof(float));
+
+		fftwf_execute_dft_c2r(plan, spectrogramIn + sliceStart, fftScratchBuffer);
 
 		for(int i=0; i<fftSize; i++)
 		{
-			signalOut[start + i] += fftAlignedBuffer[i]*window[i];
+			signalOut[start + i] += normalize*fftScratchBuffer[i]*window[i];
 		}
 
-		sliceStart += fftSize;
+		sliceStart += (fftSize/2+1);
 		start += hopSize;
-		end += hopSize;
 	}
 }
 
-
-void GriffinLimReconstruct(int iterCount, int fftSize, int hopSize, int sliceCount, float* window, float* magSpectrogramIn, float* signalOut)
+void GriffinLimReconstruct(int iterCount,
+			   int fftSize,
+			   int hopSize,
+			   int sliceCount,
+			   float* window,
+			   float windowGain,
+			   float* magSpectrogram,
+			   float* signal)
 {
+	/*NOTE(martin)
+		Implements the Griffin-Lim algorithm for reconstructing a signal from a magnitude spectrogram.
+
+		iterCount :	The number of iterations of the algorithm
+		fftSize :	The logical size of the DFT, which is also the size of the window
+		hopSize :	Number of samples between to consecutive DFT slices
+		sliceCount :	Number of DFT slices in the spectrogram
+		window :	The window function, of size (fftSize)
+		windowGain :	The gain resulting from overlap-adding the squared window (this is used for gain compensation)
+		magSpectrogram : The input magnitude spectrogram, of dimension (sliceCount , (fftSize/2+1)). The rows are the DFT slices,
+				  the columns are the (fftSize/2+1) DFT bins of a real valued signal.
+		signal :	The output estimated signal, of size (sliceCount*hopSize + fftSize)
+
+	*/
 	int sampleCount = sliceCount * hopSize + fftSize;
-	int spectrogramFloatsSize = sliceCount*(fftSize/2+1)*2;
 
 	fftwf_complex* spectrogramEstimate = (fftwf_complex*)fftwf_malloc((fftSize/2+1) * sliceCount * sizeof(fftwf_complex));
 	float* signalWork = (float*)fftwf_malloc(sampleCount*sizeof(float));
-	float* fftAlignedBuffer = (float*)fftwf_malloc(fftSize*sizeof(float));
+	float* fftScratchBuffer = (float*)fftwf_malloc(fftSize*sizeof(float));
 
-	fftwf_plan forwardPlan = fftwf_plan_dft_r2c_1d(fftSize, fftAlignedBuffer, spectrogramEstimate, FFTW_ESTIMATE);
-	fftwf_plan backwardPlan = fftwf_plan_dft_c2r_1d(fftSize, spectrogramEstimate, fftAlignedBuffer, FFTW_ESTIMATE);
+	fftwf_plan forwardPlan = fftwf_plan_dft_r2c_1d(fftSize, fftScratchBuffer, spectrogramEstimate, FFTW_ESTIMATE);
+	fftwf_plan backwardPlan = fftwf_plan_dft_c2r_1d(fftSize, spectrogramEstimate, fftScratchBuffer, FFTW_ESTIMATE);
 
-	float* eulers = (float*)alloca(sliceCount * fftSize * 2 * sizeof(float));
-
-	//NOTE(martin): initialize with random phases
-	for(int i=0; i< spectrogramFloatsSize; i += 2)
+	//NOTE(martin): initalize signal with random values
+	sranddev();
+	for(int i=0; i<sampleCount; i++)
 	{
-		float angle = (rand()/(float)RAND_MAX)*2*M_PI - M_PI;
-		eulers[i] = cos(angle);
-		eulers[i+1] = sin(angle);
+		signalWork[i] = rand()/(float)RAND_MAX;
 	}
 
 	for(int it = 0; it < iterCount; it++)
 	{
-		//NOTE(martin): compute spectrum estimate
-		for(int i = 0; i < spectrogramFloatsSize; i += 2)
+		GriffinLimSTFT(forwardPlan, fftSize, hopSize, sliceCount, window, signalWork, spectrogramEstimate, fftScratchBuffer);
+		for(int i=0; i<(fftSize/2+1)*sliceCount; i++)
 		{
-			((float*)spectrogramEstimate)[i] = magSpectrogramIn[i] * eulers[i];
-			((float*)spectrogramEstimate)[i+1] = magSpectrogramIn[i+1] * eulers[i+1];
-		}
+			float mag = magSpectrogram[i];
+			float re = spectrogramEstimate[i][0];
+			float im = spectrogramEstimate[i][1];
+			if((im == 0) && (re == 0))
+			{
+				spectrogramEstimate[i][0] = mag;
+				spectrogramEstimate[i][1] = 0;
+			}
+			else
+			{
+				float angle = atan(im/re);
+				if(re < 0)
+				{
+					angle += M_PI;
+				}
 
-		GriffinLimISTFT(backwardPlan, fftSize, hopSize, sliceCount, window, spectrogramEstimate, signalWork, fftAlignedBuffer);
-		GriffinLimSTFT(forwardPlan, fftSize, hopSize, sliceCount, window, signalWork, spectrogramEstimate, fftAlignedBuffer);
-
-		for(int i=0; i < spectrogramFloatsSize; i += 2)
-		{
-			float angle = atan(((float*)spectrogramEstimate)[i+1]/((float*)spectrogramEstimate)[i]);
-			eulers[i] = cos(angle);
-			eulers[i+1] = sin(angle);
+				spectrogramEstimate[i][0] = mag * cos(angle);
+				spectrogramEstimate[i][1] = mag * sin(angle);
+			}
 		}
+		GriffinLimISTFT(backwardPlan, fftSize, hopSize, sliceCount, window, windowGain, spectrogramEstimate, signalWork, fftScratchBuffer);
 	}
 
 	//NOTE(martin): copy output buffer and clean
 
-	memcpy(signalOut, signalWork, sampleCount*sizeof(float));
+	memcpy(signal, signalWork, sampleCount*sizeof(float));
 
 	fftwf_destroy_plan(forwardPlan);
 	fftwf_destroy_plan(backwardPlan);
 
-	fftwf_free(fftAlignedBuffer);
+	fftwf_free(fftScratchBuffer);
 	fftwf_free(signalWork);
 	fftwf_free(spectrogramEstimate);
 }
