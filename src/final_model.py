@@ -202,11 +202,12 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
         for idx, (minibatch,minibatch_shifted,f) in enumerate(GCloader):
 
             minibatch = minibatch.to(device)
+            minibatch_shifted = minibatch_shifted.to(device)
             f = f.to(device).unsqueeze(1)
 
             optimizer.zero_grad()
 
-            z = model.encode(minibatch)
+            z = model.encode(minibatch_shifted)
 
             rec = model.decode(z,f)
 
