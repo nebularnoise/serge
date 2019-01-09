@@ -19,6 +19,7 @@ class AudioDataset(data.Dataset):
             for i,elm in enumerate(self.liste):
                 if i%(len(self.liste)//10)==0:
                     print("=", end="", flush=True)
+
                 [x,fs] = li.load(elm, sr=22050)
                 x = self.pad(x,34560)
                 mel = li.filters.mel(fs,2048,500)
@@ -32,16 +33,22 @@ class AudioDataset(data.Dataset):
                 tmin = fs//fmax
                 tmax = fs//fmin
 
-                f = li.core.hz_to_mel(fs/(np.argmax(xx[tmin:tmax])+tmin))
-                f = torch.from_numpy(np.asarray(f)).float()
-                S = S/torch.max(S),f
+                f0 = li.core.hz_to_mel(fs/(np.argmax(xx[tmin:tmax])+tmin))
+                f0 = torch.from_numpy(np.asarray(f0)).float()
 
-                torch.save(S,elm.replace(".wav",".pt"))
+
+                S = S/torch.max(S)
+
+                S_shifted = self.shift(S, f0.item(), fs, 500)
+
+                torch.save((S,S_shifted,f0),elm.replace(".wav",".pt"))
             print("Done!")
 
     def __getitem__(self,i):
-        stft,f = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
-        return stft[:, (i%self.division)*self.slice_size:(i%self.division+1)*self.slice_size],f
+        stft,shifted_stft,f = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
+        slice = stft[:, (i%self.division)*self.slice_size:(i%self.division+1)*self.slice_size]
+        shifted_slice = shifted_stft[:, (i%self.division)*self.slice_size:(i%self.division+1)*self.slice_size]
+        return slice,shifted_slice,f
 
     def __len__(self):
         return len(self.liste)*self.division
@@ -52,6 +59,18 @@ class AudioDataset(data.Dataset):
             return np.concatenate([x,np.zeros(n-m)])
         else:
             return x[:n]
+
+    def shift(self,S,f0,fs,n_bin):
+        mel        = np.linspace(li.core.hz_to_mel(0),li.core.hz_to_mel(fs/2), n_bin)
+        freq       = li.core.mel_to_hz(mel)
+        bin_shift  = int(np.argmin(abs(freq-f0)) - 20)
+
+        S = torch.roll(S, bin_shift, 0)
+
+        S[n_bin-bin_shift:,:] = 0
+
+        return S
+
 
 class WAE(nn.Module):
     def __init__(self, zdim, n_trames):
@@ -180,7 +199,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
     loss = torch.nn.modules.BCELoss()
     for e in range(epoch):
-        for idx, (minibatch,f) in enumerate(GCloader):
+        for idx, (minibatch,minibatch_shifted,f) in enumerate(GCloader):
 
             minibatch = minibatch.to(device)
             f = f.to(device).unsqueeze(1)
@@ -218,7 +237,7 @@ def show_me_how_good_model_is_learning(model, GC, n):
     with torch.no_grad():
         plt.figure(figsize=(20,25))
 
-        spectrogram, frequency = next(iter(dataset))
+        spectrogram, shifted_spectrogram, frequency = next(iter(dataset))
 
         frequency = frequency.to(device).unsqueeze(1)
         spectrogram = spectrogram.to(device)
