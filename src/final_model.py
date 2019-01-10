@@ -198,7 +198,7 @@ def compute_mmd(x, y):
 
 def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
     model.train()
-    lr = 5e-4
+    lr = 1e-3
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
     loss = torch.nn.modules.BCELoss()
     for e in range(epoch):
