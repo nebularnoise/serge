@@ -66,7 +66,7 @@ class AudioDataset(data.Dataset):
     def shift(self,S,f0,fs,n_bin):
         mel        = np.linspace(li.core.hz_to_mel(0),li.core.hz_to_mel(fs/2), n_bin)
         freq       = li.core.mel_to_hz(mel)
-        bin_shift  = -int(np.argmin(abs(freq-f0)) - 20)
+        bin_shift  = -int(np.argmin(abs(freq-f0)) - 100)
 
         S = torch.roll(S, bin_shift, 0)
 
