@@ -251,7 +251,7 @@ def show_me_how_good_model_is_learning(model, GC, n):
 
     for i in range(n):
         plt.subplot(n,2,2*i + 1)
-        plt.imshow(spectrogram[i,:,:], origin="lower", aspect="auto", vmin=0, vmax=1)
+        plt.imshow(shifted_spectrogram[i,:,:], origin="lower", aspect="auto", vmin=0, vmax=1)
         plt.colorbar()
         plt.title("Original")
 
