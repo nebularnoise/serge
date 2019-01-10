@@ -214,7 +214,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             rec = model.decode(z,f)
 
-            error = loss(rec,minibatch) + compute_mmd(z,torch.randn_like(z))
+            error = loss(rec,minibatch_shifted) + compute_mmd(z,torch.randn_like(z))
 
             error.backward()
             optimizer.step()
