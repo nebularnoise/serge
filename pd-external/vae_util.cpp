@@ -47,14 +47,10 @@ extern "C" int VaeModelLoad(vae_model* model, const char* path)
 	return(0);
 }
 
-int VaeModelGetSpectrogram(vae_model* model, unsigned int count, float* spectrogram, float c0, float c1, float c2, float c3, float nu)
+#include<stdio.h>
+
+extern "C" int VaeModelGetSamples(vae_model* model, unsigned int count, float* buffer, float c0, float c1, float c2, float c3, float nu)
 {
-	const int sliceCount = 136;
-	const int fftBins = 1025;
-	const int fftSize = (fftBins - 1)*2;
-
-	const int hopSize = fftSize / 4;
-
 	if(model->module)
 	{
 		float inputs[5] = {c0, c1, c2, c3, nu};
@@ -64,34 +60,14 @@ int VaeModelGetSpectrogram(vae_model* model, unsigned int count, float* spectrog
 		torch::Tensor out = model->module->forward(v).toTensor();
 
 		auto a = out.accessor<float, 2>();
-/*
-		for(int i=0; i<a.size(0); i++)
+		for(int i=0; i<a.size(1) && i<count;i++)
 		{
-			for(int j=0; j<a.size(1);j++)
-			{
-				spectrogram[i*sliceCount+j] = a[i][j];
-			}
+			buffer[i] = a[0][i];
 		}
-*/
 		return(0);
 	}
 	else
 	{
 		return(-1);
 	}
-
-}
-
-
-extern "C" int VaeModelGetSamples(vae_model* model, unsigned int count, float* buffer, float c0, float c1, float c2, float c3, float nu)
-{
-	const int sliceCount = 136;
-	const int fftBins = 1025;
-	const int fftSize = (fftBins - 1)*2;
-
-
-	float* spectrogram = (float*)alloca(sliceCount*fftBins*sizeof(float));
-	VaeModelGetSpectrogram(model, count, spectrogram, c0, c1, c2, c3, nu);
-
-	return(0);
 }
