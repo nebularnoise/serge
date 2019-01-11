@@ -24,8 +24,17 @@ class AudioDataset(data.Dataset):
                 [x,fs] = li.load(elm, sr=22050)
                 x = self.pad(x,34560)
                 mel = li.filters.mel(fs,2048,500)
-                S = torch.from_numpy(mel.dot(abs(li.stft(x,n_fft=2048,
-                win_length=2048, hop_length=256, center=False)))).float()
+
+                S = mel.dot(abs(li.stft(x,n_fft=2048,
+                win_length=2048, hop_length=256, center=False)))
+
+
+                S[S<1e-3] = 0
+                S = np.log(1 + S)
+                S = torch.from_numpy(2 * S / np.max(S) - 1)
+
+
+
                 # fundamental frequency estimation by autocorrelation method
                 xx = np.correlate(x,x, mode="full")[len(x):]
                 fmin = 100
@@ -35,23 +44,15 @@ class AudioDataset(data.Dataset):
                 tmax = fs//fmin
 
                 f0 = fs/(np.argmax(xx[tmin:tmax])+tmin)
-
-
-
-                S = S/torch.max(S)
-
-                S_shifted = self.shift(S, f0.item(), fs, 500)
-
                 f0 = torch.from_numpy(np.asarray(li.core.hz_to_mel(f0))).float()
 
-                torch.save((S,S_shifted,f0),elm.replace(".wav",".pt"))
+                torch.save((S,f0),elm.replace(".wav",".pt"))
             print("]\nDone!")
 
     def __getitem__(self,i):
-        stft,shifted_stft,f = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
+        stft,f = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
         slice = stft[:, (i%self.division)*self.slice_size:(i%self.division+1)*self.slice_size]
-        shifted_slice = shifted_stft[:, (i%self.division)*self.slice_size:(i%self.division+1)*self.slice_size]
-        return slice,shifted_slice,f
+        return slice,f
 
     def __len__(self):
         return len(self.liste)*self.division

@@ -20,3 +20,5 @@ notebooks/.ipynb_checkpoints/
 *.png
 *.pth
 bin/*
+*/libtorch/
+*.patch
