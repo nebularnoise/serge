@@ -1,0 +1,55 @@
+#!/bin/bash
+
+# Get system and set product names
+
+UNAME=$(uname -s)
+
+NAME=vae_sampler
+BUILD_DIR=$NAME.build
+
+if [ $UNAME = "Darwin" ] ; then
+	SUFFIX="~.pd_darwin"
+elif [ $UNAME = "Linux"] ; then
+	SUFFIX="~.pd_linux"
+fi
+
+EXTERNAL=$NAME$SUFFIX
+
+# create our build directories if they don't exist
+
+if [ ! -d "$BUILD_DIR" ] ; then
+	mkdir "$BUILD_DIR"
+fi
+
+if [ ! -d "$NAME" ] ; then
+	mkdir "$NAME"
+fi
+
+if [ ! -d "$NAME"/libs ] ; then
+	mkdir "$NAME"/libs
+fi
+
+# compilation flags
+C_FLAGS=""
+CPP_FLAGS="-std=c++11"
+LINK_FLAGS="-shared -undefined dynamic_lookup -L./libs -L./libtorch/lib -ltorch -lfftw3f"
+INCLUDES="-I./fftw/api -I./libtorch/include"
+C_SRC="src/vae_sampler~.c"
+CPP_SRC="src/griffin_lim.cpp src/vae_util.cpp"
+
+# Compile the external (the libtorch wrapper is compiled as c++17, the external itself is compiled as pure C)
+clang -c -o "$BUILD_DIR/$NAME".o $C_SRC
+clang++ -o "$BUILD_DIR"/$EXTERNAL $CPP_FLAGS $INCLUDES $LINK_FLAGS $BUILD_DIR/$NAME.o $CPP_SRC
+
+
+# package dependencies with the external
+
+if [ $UNAME = "Darwin" ] ; then
+	install_name_tool -add_rpath @loader_path/libs $BUILD_DIR/$NAME~.pd_darwin
+	cp ./libtorch/lib/*.dylib $NAME/libs
+fi
+
+cp "$BUILD_DIR"/$EXTERNAL $NAME
+
+# Clean
+rm -r $BUILD_DIR
