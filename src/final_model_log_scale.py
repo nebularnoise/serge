@@ -237,7 +237,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             error = loss# + .2*compute_mmd(z,torch.randn_like(z))
 
-            loss_log[i] += error
+            loss_log[e] += error
 
             error.backward()
             optimizer.step()
