@@ -230,7 +230,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
             rec, logvar = model.decode(z,octave, semitone)
 
             nll = (logvar+(minibatch - rec).pow(2).div(torch.exp(logvar).add(1e-7))+np.log(2*np.pi))
-            loss = torch.sum(torch.sum(torch.sum(0.5*nll,2),1))
+            loss = torch.mean(torch.mean(torch.mean(0.5*nll,2),1))
 
             error = loss + .2*compute_mmd(z,torch.randn_like(z))
 
