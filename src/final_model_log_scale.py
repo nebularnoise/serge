@@ -11,7 +11,7 @@ import argparse
 
 def VAE_objective(mu_g,logvar_g,target,mu_z,logvar_z,alpha,beta,KLD_flag,eval_flag=False):
    ## latent variables are 1D but data variables are 2D --> modif sum/mean
-   rec_error = torch.sum(torch.sum(torch.sum(0.5*(logvar_g+(target-mu_g).pow(2).div(torch.exp(logvar_g).add(1e-7))+np.log(2*np.pi)),2),1))
+   rec_error = torch.mean(torch.mean(torch.mean(0.5*(logvar_g+(target-mu_g).pow(2).div(torch.exp(logvar_g).add(1e-7))+np.log(2*np.pi)),2),1))
    # note: this loss goes below 0 as it is the log of the gaussian
    if KLD_flag==1:
        KLD = 0.5*(-logvar_z+torch.exp(logvar_z)+mu_z.pow(2)-1.) # prior is unit gaussian here
