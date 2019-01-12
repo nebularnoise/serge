@@ -252,7 +252,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
                 plt.savefig("output/epoch_%d.png"%e)
 
         if (e+1)%(epoch//lr_rate)==0:
-            lr /= 2self
+            lr /= 2
             optimizer = torch.optim.Adam(model.parameters(),lr=lr)
 
 def show_me_how_good_model_is_learning(model, GC, n):
