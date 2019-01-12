@@ -17,23 +17,22 @@ class AudioDataset(data.Dataset):
             print("Preprocessing audio dataset... ")
             print("                      ]", end="\r")
             print("[", end="")
+
             for i,elm in enumerate(self.liste):
                 if i%(len(self.liste)//20)==0:
                     print("=", end="", flush=True)
 
+                # LOADING AUDIO
                 [x,fs] = li.load(elm, sr=22050)
                 x = self.pad(x,34560)
                 mel = li.filters.mel(fs,2048,500)
 
+                # AMPLITUDE MEL-SOECTROGRAM
                 S = mel.dot(abs(li.stft(x,n_fft=2048,
                 win_length=2048, hop_length=256, center=False)))
-
-
                 S[S<1e-3] = 0
                 S = np.log(1 + S)
                 S = torch.from_numpy(2 * S / np.max(S) - 1)
-
-
 
                 # fundamental frequency estimation by autocorrelation method
                 xx = np.correlate(x,x, mode="full")[len(x):]
@@ -47,6 +46,7 @@ class AudioDataset(data.Dataset):
                 f0 = torch.from_numpy(np.asarray(li.core.hz_to_mel(f0))).float()
 
                 torch.save((S,f0),elm.replace(".wav",".pt"))
+
             print("]\nDone!")
 
     def __getitem__(self,i):
@@ -97,19 +97,20 @@ class WAE(nn.Module):
         lin2 = nn.Linear(1024, 256)
         lin3 = nn.Linear(256, zdim)
 
-        self.decf = nn.Conv2d(1,1,stride=1, kernel_size=3, padding=1)
-        dec0 = nn.ConvTranspose2d(size[0],size[0],stride=2, kernel_size=5, padding=2)
-        dec1 = nn.ConvTranspose2d(size[1],size[0],stride=2, kernel_size=5, padding=2)
-        dec2 = nn.ConvTranspose2d(size[2],size[1],stride=2, kernel_size=5, padding=2)
-        dec3 = nn.ConvTranspose2d(size[3],size[2],stride=2, kernel_size=5, padding=2)
-        dec4 = nn.ConvTranspose2d(size[4],size[3],stride=2, kernel_size=5, padding=2)
-        dec5 = nn.ConvTranspose2d(size[5],size[4],stride=2, kernel_size=5, padding=2)
 
-        dlin1 = nn.Linear(1024, self.flat_number)
+        dlin1 = nn.Linear(zdim,256)
         dlin2 = nn.Linear(256,1024)
-        dlin3 = nn.Linear(zdim+1,256)
+        dlin3 = nn.Linear(1024, self.flat_number)
 
-        self.f1   = nn.Sequential(enc1,
+        self.dconv1 = nn.Conv2d(256, 128, stride=1, padding=2, kernel_size=5)
+        self.dconv2 = nn.Conv2d(128, 64,  stride=1, padding=2, kernel_size=5)
+        self.dconv3 = nn.Conv2d(64, 32,  stride=1, padding=3, kernel_size=7)
+        self.dconv4 = nn.Conv2d(32, 4,  stride=1, padding=4, kernel_size=9)
+
+        self.dconv_logvar = nn.Conv2d(4, 1, stride=1, padding=3, kernel_size=7)
+        self.dconv_mean   = nn.Conv2d(4, 1, stride=1, padding=3, kernel_size=7)
+
+        self.e1   = nn.Sequential(enc1,
                                 nn.BatchNorm2d(num_features=size[1]),act,
                                 enc2,
                                 nn.BatchNorm2d(num_features=size[2]),act,
@@ -120,31 +121,18 @@ class WAE(nn.Module):
                                 enc5,
                                 nn.BatchNorm2d(num_features=size[5]),act)
 
-        self.f2   = nn.Sequential(lin1,
+        self.e2   = nn.Sequential(lin1,
                                  nn.BatchNorm1d(num_features=1024),act,
                                  lin2,
                                  nn.BatchNorm1d(num_features=256),act,
                                  lin3)
 
-        self.f3   = nn.Sequential(dlin3,
-                                  nn.BatchNorm1d(num_features=256), act,
-                                  dlin2,
-                                  nn.BatchNorm1d(num_features=1024), act,
-                                  dlin1,
-                                  nn.BatchNorm1d(num_features=self.flat_number), act)
-
-        self.f4   = nn.Sequential(dec5,
-                                 nn.BatchNorm2d(num_features=size[4]), act,
-                                 dec4,
-                                 nn.BatchNorm2d(num_features=size[3]), act,
-                                 dec3,
-                                 nn.BatchNorm2d(num_features=size[2]), act,
-                                 dec2,
-                                 nn.BatchNorm2d(num_features=size[1]), act,
-                                 dec1,
-                                 nn.BatchNorm2d(num_features=size[0]), act,
-                                 dec0, nn.Sigmoid())
-
+        self.d1   = nn.Sequential(dlin1,
+                                 nn.BatchNorm1d(num_features=256), act,
+                                 dlin2,
+                                 nn.BatchNorm1d(num_features=1024), act,
+                                 dlin3,
+                                 nn.BatchNorm1d(num_features=self.flat_number))
 
 
 
@@ -164,24 +152,17 @@ class WAE(nn.Module):
         inp = self.f2(inp)
         return inp
 
-    def decode(self, inp, f):
-        #print(inp.size())
-        inp = torch.cat([inp, f], 1)
-        inp = self.f3(inp)
-        inp = inp.view(-1, 256, 16, self.n_trames//32)
-        inp = self.f4(inp)
-        inp = nn.functional.interpolate(inp, size=(500,self.n_trames))
-        inp = self.decf(inp)
-        inp = torch.sigmoid(inp)
-        return inp.squeeze(1)
+    def decode(self, inp, oct, semitone):
 
-    def sample(self, inp, f):
+        return inp
+
+    def sample(self, inp, oct, semitone):
         mel = torch.from_numpy(li.filters.mel(22050, 2048, n_mels=500)).float()
         mel_specto = self.decode(inp, f)
         return torch.transpose(mel, 0, 1).mm(mel_specto.squeeze(0))
 
-    def forward(self,inp, f):
-        return self.decode(self.encode(inp),f)
+    def forward(self,inp, oct, semitone):
+        return self.decode(self.encode(inp), oct, semitone)
 
 def compute_kernel(x, y):
     x_size = x.size(0)
@@ -207,19 +188,18 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
     loss = torch.nn.modules.BCELoss()
     for e in range(epoch):
-        for idx, (minibatch,minibatch_shifted,f) in enumerate(GCloader):
+        for idx, (minibatch,f) in enumerate(GCloader):
 
             minibatch = minibatch.to(device)
-            minibatch_shifted = minibatch_shifted.to(device)
             f = f.to(device).unsqueeze(1)
 
             optimizer.zero_grad()
 
-            z = model.encode(minibatch_shifted)
+            z = model.encode(minibatch)
 
             rec = model.decode(z,f)
 
-            error = loss(rec,minibatch_shifted) + .2*compute_mmd(z,torch.randn_like(z))
+            error = loss(rec,minibatch) + .2*compute_mmd(z,torch.randn_like(z))
 
             error.backward()
             optimizer.step()
@@ -246,7 +226,7 @@ def show_me_how_good_model_is_learning(model, GC, n):
     with torch.no_grad():
         plt.figure(figsize=(20,25))
 
-        spectrogram, shifted_spectrogram, frequency = next(iter(dataset))
+        spectrogram, frequency = next(iter(dataset))
 
         frequency = frequency.to(device).unsqueeze(1)
         spectrogram = spectrogram.to(device)
@@ -256,12 +236,12 @@ def show_me_how_good_model_is_learning(model, GC, n):
 
     for i in range(n):
         plt.subplot(n,2,2*i + 1)
-        plt.imshow(shifted_spectrogram[i,:,:], origin="lower", aspect="auto", vmin=0, vmax=1)
+        plt.imshow(spectrogram[i,:,:], origin="lower", aspect="auto", vmin=-1, vmax=1)
         plt.colorbar()
         plt.title("Original")
 
         plt.subplot(n,2,2*i+ 2)
-        plt.imshow(rec[i,:,:], origin="lower", aspect="auto", vmin=0, vmax=1)
+        plt.imshow(rec[i,:,:], origin="lower", aspect="auto", vmin=-1, vmax=1)
         plt.colorbar()
         plt.title("Reconstruction")
     model.train()
