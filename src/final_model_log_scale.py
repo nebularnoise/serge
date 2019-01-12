@@ -14,7 +14,7 @@ def objective(gen,target):
     # losses are summed over features and batch
     mu_g = gen[0]
     logvar_g = gen[1]
-    rec_error = torch.mean(0.5*(logvar_g+(target-mu_g).pow(2).div(torch.exp(logvar_g).add(1e-11))+np.log(2*np.pi)))
+    rec_error = torch.mean(0.5*(logvar_g+(target-mu_g).pow(2).mul(torch.exp(-logvar_g))+np.log(2*np.pi)))
     # note: this loss goes below 0 as it is the log of the gaussian
     return rec_error
 
