@@ -252,7 +252,9 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             mean, logvar = model.decode(z,octave, semitone)
 
-            error = sum(VAE_objective(mean,logvar,minibatch,z,0,0,0,0,eval_flag=True))
+            print(mean.size(), logvar.size(), minibatch.size(),  z.size())
+
+            error = VAE_objective(mean,logvar,minibatch,z,0,0,0,0,eval_flag=True)[1]
 
             loss_log[e] += error
 
