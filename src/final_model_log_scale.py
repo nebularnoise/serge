@@ -9,12 +9,12 @@ from glob import glob
 from os import system
 import argparse
 
-def VAE_objective(gen,target):
+def objective(gen,target):
     # latent code is vector and data is 2D matrix here
     # losses are summed over features and batch
     mu_g = gen[0]
     logvar_g = gen[1]
-    rec_error = torch.sum(torch.sum(torch.sum(0.5*(logvar_g+(target-mu_g).pow(2).div(torch.exp(logvar_g).add(1e-7))+np.log(2*np.pi)),2),1))
+    rec_error = torch.sum(torch.sum(torch.sum(0.5*(logvar_g+(target-mu_g).pow(2).div(torch.exp(logvar_g).add(1e-11))+np.log(2*np.pi)),2),1))
     # note: this loss goes below 0 as it is the log of the gaussian
     return rec_error
 
@@ -245,7 +245,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             #print(mean.size(), logvar.size(), minibatch.size(),  z.size())
 
-            error = VAE_objective(gen, minibatch)
+            error = objective(gen, minibatch)
 
             loss_log[e] += error
 
