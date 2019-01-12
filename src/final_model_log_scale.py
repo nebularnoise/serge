@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from torch.utils import data
 import numpy as np
 import matplotlib.pyplot as plt
@@ -32,7 +33,7 @@ class AudioDataset(data.Dataset):
                 win_length=2048, hop_length=256, center=False)))
                 S[S<1e-3] = 0
                 S = np.log(1 + S)
-                S = torch.from_numpy(2 * S / np.max(S) - 1)
+                S = torch.from_numpy(2 * S / np.max(S) - 1).float()
 
                 # fundamental frequency estimation by autocorrelation method
                 xx = np.correlate(x,x, mode="full")[len(x):]
@@ -87,6 +88,8 @@ class WAE(nn.Module):
 
         act = nn.LeakyReLU()
 
+        self.act = act
+
         enc1 = nn.Conv2d(size[0],size[1],stride=2, kernel_size=5, padding=2)
         enc2 = nn.Conv2d(size[1],size[2],stride=2, kernel_size=5, padding=2)
         enc3 = nn.Conv2d(size[2],size[3],stride=2, kernel_size=5, padding=2)
@@ -98,7 +101,7 @@ class WAE(nn.Module):
         lin3 = nn.Linear(256, zdim)
 
 
-        dlin1 = nn.Linear(zdim,256)
+        dlin1 = nn.Linear(zdim+7+12,256)
         dlin2 = nn.Linear(256,1024)
         dlin3 = nn.Linear(1024, self.flat_number)
 
@@ -128,11 +131,11 @@ class WAE(nn.Module):
                                  lin3)
 
         self.d1   = nn.Sequential(dlin1,
-                                 nn.BatchNorm1d(num_features=256), act,
+                                 act,
                                  dlin2,
-                                 nn.BatchNorm1d(num_features=1024), act,
+                                 act,
                                  dlin3,
-                                 nn.BatchNorm1d(num_features=self.flat_number))
+                                 act)
 
 
 
@@ -145,20 +148,32 @@ class WAE(nn.Module):
 
     def encode(self, inp):
         inp = inp.unsqueeze(1)
-        inp = self.f1(inp)
+        inp = self.e1(inp)
         #print(inp.size())
         inp = self.flatten(inp)
         #print(inp.size())
-        inp = self.f2(inp)
+        inp = self.e2(inp)
         return inp
 
     def decode(self, inp, oct, semitone):
+        inp = torch.cat([inp, oct, semitone], 1)
+        #print(inp.size())
+        inp = self.d1(inp).view(-1,256,16,4)
+        #print(inp.size())
+        z_2 = self.act(self.dconv1(F.interpolate(inp, scale_factor=3)))
+        z_3 = self.act(self.dconv2(F.interpolate(z_2, scale_factor=3)))
+        z_4 = self.act(self.dconv3(F.interpolate(z_3, scale_factor=3)))
+        z_5 = self.act(self.dconv4(F.interpolate(z_4, size=[500,128])))
 
-        return inp
+        logvar = self.dconv_logvar(z_5).squeeze(1)
+        mean   = torch.tanh(self.dconv_mean(z_5)).squeeze(1)
+
+
+        return mean, logvar
 
     def sample(self, inp, oct, semitone):
         mel = torch.from_numpy(li.filters.mel(22050, 2048, n_mels=500)).float()
-        mel_specto = self.decode(inp, f)
+        mel_specto, logvar = self.decode(inp, f)
         return torch.transpose(mel, 0, 1).mm(mel_specto.squeeze(0))
 
     def forward(self,inp, oct, semitone):
