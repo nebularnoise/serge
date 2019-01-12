@@ -226,9 +226,9 @@ def compute_mmd(x, y):
     mmd = x_kernel.mean() + y_kernel.mean() - 2*xy_kernel.mean()
     return mmd
 
-def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
+def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10, lr=3):
     model.train()
-    lr = 1e-3
+    lr = 1*10**(-lr)
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
 
     loss_log = np.zeros(epoch)
@@ -325,6 +325,7 @@ if __name__=="__main__":
     parser.add_argument("--nb-update", type=int, default=10, help="Number of update / backup to do")
     parser.add_argument("--process-dataset", type=int, default=0, help="1/0 if Preprocessing needed")
     parser.add_argument("--batch-size", type=int, default=8, help="batch size")
+    parser.add_argument("--learning-rate", type=int, default=3, help="Define learning rate (1e-N)")
     args = parser.parse_args()
 
     GC = AudioDataset(files="%s/*.wav" % args.dataset, process=args.process_dataset, slice_size=args.n_trames)
@@ -338,7 +339,7 @@ if __name__=="__main__":
     model = WAE(args.zdim, args.n_trames).to(device)
 
     train(model, GCloader, args.epoch, savefig=True, lr_rate=args.lr_step,
-        nb_update=args.nb_update)
+        nb_update=args.nb_update, lr=args.learning_rate)
     # show_me_how_good_model_is_learning(model, GC, 4)
     # plt.show()
     torch.save(model, "model_%d_epoch.pt"%args.epoch)
