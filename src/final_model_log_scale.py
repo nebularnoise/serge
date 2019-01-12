@@ -259,12 +259,13 @@ def show_me_how_good_model_is_learning(model, GC, n):
     with torch.no_grad():
         plt.figure(figsize=(20,25))
 
-        spectrogram, frequency = next(iter(dataset))
+        spectrogram, oct, semitone = next(iter(dataset))
 
-        frequency = frequency.to(device).unsqueeze(1)
+        oct = oct.to(device)
+        semitone = semitone.to(device)
         spectrogram = spectrogram.to(device)
 
-        rec = model(spectrogram, frequency).cpu().numpy()
+        rec, logvar = model(spectrogram, oct, semitone).cpu().numpy()
         spectrogram = spectrogram.cpu().numpy()
 
     for i in range(n):
