@@ -230,12 +230,11 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             z = model.encode(minibatch)
 
-            rec, logvar = model.decode(z,octave, semitone)
+            mean, logvar = model.decode(z,octave, semitone)
 
-            nll = logvar + (minibatch - rec).pow(2).div(torch.exp(logvar) + 1e-3)
-            loss = torch.mean(torch.mean(torch.mean(0.5*nll,2),1))
+            rec = mean + torch.randn_like(logvar)*torch.exp(.5*logvar)
 
-            error = loss# + .2*compute_mmd(z,torch.randn_like(z))
+            error = (minibatch - rec).pow(2)# + .2*compute_mmd(z,torch.randn_like(z))
 
             loss_log[e] += error
 
