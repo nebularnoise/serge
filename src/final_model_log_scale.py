@@ -265,7 +265,8 @@ def show_me_how_good_model_is_learning(model, GC, n):
         semitone = semitone.to(device)
         spectrogram = spectrogram.to(device)
 
-        rec, logvar = model(spectrogram, oct, semitone).cpu().numpy()
+        rec, logvar = model(spectrogram, oct, semitone)
+        rec = rec.cpu().numpy()
         spectrogram = spectrogram.cpu().numpy()
 
     for i in range(n):
