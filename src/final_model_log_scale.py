@@ -234,7 +234,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             rec = mean + torch.randn_like(logvar)*torch.exp(.5*logvar)
 
-            error = (minibatch - rec).pow(2)# + .2*compute_mmd(z,torch.randn_like(z))
+            error = torch.sum((minibatch - rec).pow(2))# + .2*compute_mmd(z,torch.randn_like(z))
 
             loss_log[e] += error
 
