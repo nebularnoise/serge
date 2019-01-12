@@ -248,8 +248,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             if torch.isnan(error).any():
                 torch.save([model,loss_log], "output/model_before_nan.pt")
-
-            assert bool(torch.isnan(error).any()), "ERROR HAS BECOME OUTRAGEOUS"
+                exit()
 
             error.backward()
             optimizer.step()
