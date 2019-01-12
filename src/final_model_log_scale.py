@@ -9,25 +9,11 @@ from glob import glob
 from os import system
 import argparse
 
-def VAE_objective(mu_g,logvar_g,target,mu_z,logvar_z,alpha,beta,KLD_flag,eval_flag=False):
+def VAE_objective(mu_g,logvar_g,target):
    ## latent variables are 1D but data variables are 2D --> modif sum/mean
    rec_error = torch.mean(torch.mean(torch.mean(0.5*(logvar_g+(target-mu_g).pow(2).div(torch.exp(logvar_g).add(1e-7))+np.log(2*np.pi)),2),1))
-   # note: this loss goes below 0 as it is the log of the gaussian
-   if KLD_flag==1:
-       KLD = 0.5*(-logvar_z+torch.exp(logvar_z)+mu_z.pow(2)-1.) # prior is unit gaussian here
-       KLD = torch.sum(torch.sum(KLD,1))
-       # here the latent space is still 1D
-       if eval_flag is False:
-           VAE_loss = rec_error.mul(alpha)+KLD.mul(beta)
-       else:
-           VAE_loss = rec_error+KLD # no hyper-parameter scaling
-   else:
-       KLD = torch.zeros(1,1)
-       if eval_flag is False:
-           VAE_loss = rec_error.mul(alpha)
-       else:
-           VAE_loss = rec_error # no hyper-parameter scaling
-   return VAE_loss,rec_error,KLD
+   return rec_error
+
 
 class AudioDataset(data.Dataset):
     def __init__(self, files, process, slice_size):
@@ -77,6 +63,8 @@ class AudioDataset(data.Dataset):
 
                 oct[idx//12] = 1
                 semitone[idx%12] = 1
+
+
 
                 torch.save((S, oct, semitone),elm.replace(".wav",".pt"))
 
@@ -257,6 +245,11 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
             error = VAE_objective(mean,logvar,minibatch,z,0,0,0,0,eval_flag=True)[1]
 
             loss_log[e] += error
+
+            if torch.isnan(error).any():
+                torch.save([model,loss_log], "output/model_before_nan.pt")
+
+            assert torch.isnan(error).any(), "ERROR HAS BECOME OUTRAGEOUS"
 
             error.backward()
             optimizer.step()
