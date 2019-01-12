@@ -11,7 +11,9 @@ import argparse
 
 def VAE_objective(mu_g,logvar_g,target):
    ## latent variables are 1D but data variables are 2D --> modif sum/mean
-   rec_error = torch.mean(torch.mean(torch.mean(0.5*(logvar_g+(target-mu_g).pow(2).div(torch.exp(logvar_g).add(1e-7))+np.log(2*np.pi)),2),1))
+   rec_loss = (target-mu_g).pow(2) / (torch.exp(logvar_g) + 1e-7)
+
+   rec_error = torch.mean(0.5*(logvar_g + rec_loss))
    return rec_error
 
 
@@ -251,7 +253,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
                 torch.save([model,loss_log], "output/model_before_nan.pt")
                 show_me_how_good_model_is_learning(model, GC, 4)
                 plt.savefig("output/before_nan.png")
-                
+
                 print("Model is seriously overfitting.")
                 exit()
 
