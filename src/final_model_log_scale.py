@@ -247,7 +247,12 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
             loss_log[e] += error
 
             if torch.isnan(error).any():
+
                 torch.save([model,loss_log], "output/model_before_nan.pt")
+                show_me_how_good_model_is_learning(model, GC, 4)
+                plt.savefig("output/before_nan.png")
+                
+                print("Model is seriously overfitting.")
                 exit()
 
             error.backward()
