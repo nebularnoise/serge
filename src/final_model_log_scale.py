@@ -9,6 +9,26 @@ from glob import glob
 from os import system
 import argparse
 
+def VAE_objective(mu_g,logvar_g,target,mu_z,logvar_z,alpha,beta,KLD_flag,eval_flag=False):
+   ## latent variables are 1D but data variables are 2D --> modif sum/mean
+   rec_error = torch.sum(torch.sum(torch.sum(0.5*(logvar_g+(target-mu_g).pow(2).div(torch.exp(logvar_g).add(1e-7))+np.log(2*np.pi)),2),1))
+   # note: this loss goes below 0 as it is the log of the gaussian
+   if KLD_flag==1:
+       KLD = 0.5*(-logvar_z+torch.exp(logvar_z)+mu_z.pow(2)-1.) # prior is unit gaussian here
+       KLD = torch.sum(torch.sum(KLD,1))
+       # here the latent space is still 1D
+       if eval_flag is False:
+           VAE_loss = rec_error.mul(alpha)+KLD.mul(beta)
+       else:
+           VAE_loss = rec_error+KLD # no hyper-parameter scaling
+   else:
+       KLD = torch.zeros(1,1)
+       if eval_flag is False:
+           VAE_loss = rec_error.mul(alpha)
+       else:
+           VAE_loss = rec_error # no hyper-parameter scaling
+   return VAE_loss,rec_error,KLD
+
 class AudioDataset(data.Dataset):
     def __init__(self, files, process, slice_size):
         self.slice_size = slice_size
@@ -232,9 +252,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             mean, logvar = model.decode(z,octave, semitone)
 
-            rec = mean + torch.randn_like(logvar)*torch.exp(.5*logvar)
-
-            error = torch.sum((minibatch - rec).pow(2))# + .2*compute_mmd(z,torch.randn_like(z))
+            error = VAE_objective(mean,logvar,minibatch,z,torch.zeros_like(z),0,0,0,eval_flag=True)
 
             loss_log[e] += error
 
