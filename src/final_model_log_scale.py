@@ -14,7 +14,7 @@ def VAE_objective(mu_g,logvar_g,target):
    rec_loss = (target-mu_g).pow(2) / (torch.exp(logvar_g) + 1e-7)
 
    rec_error = torch.mean(0.5*(logvar_g + rec_loss))
-   return rec_error
+   return torch.exp(rec_error)
 
 
 class AudioDataset(data.Dataset):
