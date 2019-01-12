@@ -249,8 +249,8 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             rec, logvar = model.decode(z,octave, semitone)
 
-            nll = logvar +
-            loss = torch.mean(torch.mean(torch.mean(0.5*nll,2),1))
+            #nll = logvar +
+            #loss = torch.mean(torch.mean(torch.mean(0.5*nll,2),1))
 
             error = VAE_objective(rec, logvar, z, torch.zeros_like(z), 0, 0, 1, 1)
 
