@@ -160,6 +160,12 @@ class WAE(nn.Module):
                                  dlin3,
                                  act)
 
+        for elm in self.parameters():
+            try:
+                torch.nn.init.xavier_normal_(elm)
+            except:
+                pass
+
 
 
     def flatten(self, inp):
