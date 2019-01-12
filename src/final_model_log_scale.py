@@ -213,6 +213,9 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
     model.train()
     lr = 1e-3
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
+
+    loss_log = np.zeros(epoch)
+
     #loss = torch.nn.modules.BCELoss()
     for e in range(epoch):
         for idx, (minibatch,octave,semitone) in enumerate(GCloader):
@@ -234,20 +237,22 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
 
             error = loss# + .2*compute_mmd(z,torch.randn_like(z))
 
+            loss_log[i] += error
+
             error.backward()
             optimizer.step()
             torch.cuda.empty_cache()
 
-        print("     epoch {} done...".format(e), end="\r")
+        print("     epoch {} done... error {:03d}".format(e,error), end="\r")
         if e%(epoch//nb_update)==0:
-            torch.save(model, "output/model_%d_epoch.pt" % e)
-            print("EPOCH %d, ERROR %f" % (e,error))
+            torch.save([model,loss_log], "output/model_%d_epoch.pt" % e)
+            print("EPOCH %d, ERROR %f                            " % (e,error))
             if savefig:
                 show_me_how_good_model_is_learning(model, GC, 4)
                 plt.savefig("output/epoch_%d.png"%e)
 
         if (e+1)%(epoch//lr_rate)==0:
-            lr /= 2.
+            lr /= 2self
             optimizer = torch.optim.Adam(model.parameters(),lr=lr)
 
 def show_me_how_good_model_is_learning(model, GC, n):
