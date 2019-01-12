@@ -19,6 +19,11 @@ class AudioDataset(data.Dataset):
             print("                      ]", end="\r")
             print("[", end="")
 
+
+            list_freq = 27.5*(2**(np.arange(88)/12))
+
+            get_idx = lambda f: int(np.argmin(abs(list_freq - f)))
+
             for i,elm in enumerate(self.liste):
                 if i%(len(self.liste)//20)==0:
                     print("=", end="", flush=True)
@@ -44,16 +49,23 @@ class AudioDataset(data.Dataset):
                 tmax = fs//fmin
 
                 f0 = fs/(np.argmax(xx[tmin:tmax])+tmin)
-                f0 = torch.from_numpy(np.asarray(li.core.hz_to_mel(f0))).float()
 
-                torch.save((S,f0),elm.replace(".wav",".pt"))
+                idx = get_idx(f0)
+
+                oct = torch.zeros([7])
+                semitone = torch.zeros([12])
+
+                oct[idx//12] = 1
+                semitone[idx%12] = 1
+
+                torch.save((S, oct, semitone),elm.replace(".wav",".pt"))
 
             print("]\nDone!")
 
     def __getitem__(self,i):
-        stft,f = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
+        stft,o,s = torch.load(self.liste[i//self.division].replace(".wav",".pt"))
         slice = stft[:, (i%self.division)*self.slice_size:(i%self.division+1)*self.slice_size]
-        return slice,f
+        return slice,o,s
 
     def __len__(self):
         return len(self.liste)*self.division
@@ -160,10 +172,10 @@ class WAE(nn.Module):
         #print(inp.size())
         inp = self.d1(inp).view(-1,256,16,4)
         #print(inp.size())
-        z_2 = self.act(self.dconv1(F.interpolate(inp, scale_factor=3)))
-        z_3 = self.act(self.dconv2(F.interpolate(z_2, scale_factor=3)))
-        z_4 = self.act(self.dconv3(F.interpolate(z_3, scale_factor=3)))
-        z_5 = self.act(self.dconv4(F.interpolate(z_4, size=[500,128])))
+        z_2 = self.act(self.dconv1(F.upsample(inp, scale_factor=3)))
+        z_3 = self.act(self.dconv2(F.upsample(z_2, scale_factor=3)))
+        z_4 = self.act(self.dconv3(F.upsample(z_3, scale_factor=3)))
+        z_5 = self.act(self.dconv4(F.upsample(z_4, size=[500,128])))
 
         logvar = self.dconv_logvar(z_5).squeeze(1)
         mean   = torch.tanh(self.dconv_mean(z_5)).squeeze(1)
@@ -201,20 +213,26 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10):
     model.train()
     lr = 1e-3
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
-    loss = torch.nn.modules.BCELoss()
+    #loss = torch.nn.modules.BCELoss()
     for e in range(epoch):
-        for idx, (minibatch,f) in enumerate(GCloader):
+        for idx, (minibatch,octave,semitone) in enumerate(GCloader):
+
+
 
             minibatch = minibatch.to(device)
-            f = f.to(device).unsqueeze(1)
+            octave    = octave.to(device)
+            semitone  = semitone.to(device)
 
             optimizer.zero_grad()
 
             z = model.encode(minibatch)
 
-            rec = model.decode(z,f)
+            rec, logvar = model.decode(z,octave, semitone)
 
-            error = loss(rec,minibatch) + .2*compute_mmd(z,torch.randn_like(z))
+            nll = (logvar+(minibatch - rec).pow(2).div(torch.exp(logvar).add(1e-7))+np.log(2*np.pi))
+            loss = torch.sum(torch.sum(torch.sum(0.5*nll,2),1))
+
+            error = loss + .2*compute_mmd(z,torch.randn_like(z))
 
             error.backward()
             optimizer.step()
