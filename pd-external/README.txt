@@ -1,37 +1,40 @@
-Dependency
+Dependencies
 ----------
 
 libtorch can be found at : https://pytorch.org
 Choose C++, select your system, then download the zip file and unzip it. (See caveats if you're on macOS)
 
 fftw can be downloaded with : wget http://www.fftw.org/fftw-3.3.8.tar.gz
-You should compile fftw with single precision support : unzip the tarball, cd to the fftw directory, then 
+You should compile fftw with single precision support and position independant code : unzip the tarball, cd to the fftw directory, then
 
-./configure --enable-float
+./configure --enable-float --with-pic
 make
-make install
 
 libsndfile can be found here : http://www.mega-nerd.com/libsndfile/files/libsndfile-1.0.28.tar.gz
+
 
 Building
 --------
 
-mkdir build
-cd build
-cmake -DCMAKE_PREFIX_PATH=$(cd ../libtorch ; pwd) ..
-make
+On macOS and Linux, you should be able to run the build script and be done with it.
+If you built the dependencies in another directory, you can pass the paths to the libraries in the variables FFTW_DIR and TORCH_DIR, eg.
+
+export FFTW_DIR=/path/to/fftw
+export TORCH_DIR=/path/to/libtorch
+./build
+
 
 Running
 -------
 
-Copy the external in the same folder as the libtorch directory and the testbed.pd patch, then open testbed.pd
+The external is bundled with its dependencies in the vae_sampler directory. Add this directory to Pd's search path to use the external. You can also cd in vae_sampler and open the testbed.pd patch to check that the external can be loaded by Pd.
 
 Caveats
 -------
 
 With the macOS version of libtorch, you have to manually add libiomp and libmkml to the libtorch/lib folder. These can be found here : https://github.com/intel/mkl-dnn/releases
 
-Currently, at least in the macOS version, you have to keep the external in the same folder as the libtorch package. You can use the external from any patch provided you correctly set the external search paths in PureData's preferences.
+The test patches use various externals that may not be present in your pd distribution (eg. pd vanilla). Install the cyclone library to get the full functionality.
 
 Tested on
 ---------

@@ -104,7 +104,7 @@ void GriffinLimReconstruct(int iterCount,
 	fftwf_plan backwardPlan = fftwf_plan_dft_c2r_1d(fftSize, spectrogramEstimate, fftScratchBuffer, FFTW_ESTIMATE);
 
 	//NOTE(martin): initalize signal with random values
-	sranddev();
+	srand(54652);
 	for(int i=0; i<sampleCount; i++)
 	{
 		signalWork[i] = rand()/(float)RAND_MAX;

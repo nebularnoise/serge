@@ -22,3 +22,5 @@ notebooks/.ipynb_checkpoints/
 bin/*
 */libtorch/
 *.patch
+*/fftw*
+*/vae_sample*
