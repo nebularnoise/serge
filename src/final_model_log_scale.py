@@ -10,6 +10,27 @@ from os import system
 import argparse
 
 def objective(gen,target,z,alpha=1):
+    """WAE objective
+
+    Compute the MMD RBF of the latent space and the MSE between generation and
+    target
+
+    Parameters
+    ----------
+    gen: tuple
+        Output of model (mean, logvar)
+    target: Tensor
+        Target...
+    z: Tensor
+        output of encoder
+    alpha: float
+        Gain of MMD loss
+
+    Returns
+    -------
+    float
+        Total loss (MSE + alpha*MMDRBF)
+    """
     mu_g = gen[0]
     logvar_g = gen[1]
 
@@ -18,10 +39,25 @@ def objective(gen,target,z,alpha=1):
     return rec_error + alpha*regularization
 
 class AudioDataset(data.Dataset):
+    """Defines an audio data loader
+
+    Given a directory filled with *.wav files, returns the samples'
+    mel_specto alongside and estimation of the fundamental frequency
+
+    Parameters
+    ----------
+    files: str
+        string to directory (e.g "audio/*.wav")
+    process: bool
+        defines wether a preprocessing (i.e computing the mel-specto) is needed
+    slice_size: int
+        size of mel-spectrogram slices (default to 128, not really tried)
+    """
     def __init__(self, files, process, slice_size):
         self.slice_size = slice_size
         self.division = 128 // slice_size
         self.liste = glob(files)
+
         if process:
             print("Preprocessing audio dataset... ")
             print("                      ]", end="\r")
@@ -100,6 +136,26 @@ class AudioDataset(data.Dataset):
 
 
 class WAE(nn.Module):
+    """Defines a WAE Module
+
+    Architecure of this model is the following
+
+    Encoding:
+        5 convolutives layers
+        3 fully-connected layers
+    Decoding:
+        3 fully-connected layers
+        5 upsample / convolutive layers
+
+    Activation between layers is a LeakyRELU
+
+    Parameters
+    ----------
+    zdim: int
+        Dimension of the latent space
+    n_trames: int
+        size of mel-spectrogram slices (default to 128, not really tried)
+    """
     def __init__(self, zdim, n_trames):
         super(WAE,self).__init__()
         size = [1, 16, 32, 64, 128, 256]
@@ -200,6 +256,9 @@ class WAE(nn.Module):
         return mean, logvar
 
     def sample(self, inp, oct, semitone):
+        """
+        Given a latent point and a octave + semitone onehot, return a lin-specto
+        """
         mel = torch.from_numpy(li.filters.mel(22050, 2048, n_mels=500)).float()
         mel_specto, logvar = self.decode(inp, oct, semitone)
         mel_specto = torch.exp(mel_specto + 1) - 1
@@ -228,6 +287,27 @@ def compute_mmd(x, y):
     return mmd
 
 def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10, lr=3, alpha=1):
+    """WAE's train routine
+
+    Parameters:
+    -----------
+    model: WAE object
+        model to train
+    GCloader: generator
+        Generator given by DataLoader(AudioDataset)
+    epoch: int
+        Total number of epoch
+    savefig: bool
+        Defines weither or not the routine saves reconstruction tests
+    lr_rate: int
+        Number of times the learning rate is divided by 2
+    nb_update: int
+        Number of savefig and savemodel to do over all epochs
+    lr: int
+        Initial learning rate definition (1e-lr)
+    alpha: float
+        Gain of MMD loss over rec loss
+    """
     model.train()
     lr = 1*10**(-lr)
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
