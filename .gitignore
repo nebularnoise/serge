@@ -22,3 +22,4 @@ notebooks/.ipynb_checkpoints/
 bin/*
 */libtorch/
 *.patch
+*/fftw*
