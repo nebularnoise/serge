@@ -9,15 +9,13 @@ from glob import glob
 from os import system
 import argparse
 
-def objective(gen,target):
-    # latent code is vector and data is 2D matrix here
-    # losses are summed over features and batch
+def objective(gen,target,z,alpha=1):
     mu_g = gen[0]
     logvar_g = gen[1]
-    #rec_error = torch.mean(0.5*(logvar_g+(target-mu_g).pow(2).mul(torch.exp(-logvar_g))+np.log(2*np.pi)))
-    rec_error = torch.mean((gen[0] - target)**2)
-    # note: this loss goes below 0 as it is the log of the gaussian
-    return rec_error
+
+    rec_error      = torch.mean((gen[0] - target)**2)
+    regularization = compute_mmd(z, torch.randn_like(z))
+    return rec_error + alpha*regularization
 
 class AudioDataset(data.Dataset):
     def __init__(self, files, process, slice_size):
@@ -237,9 +235,6 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10, lr=3):
     #loss = torch.nn.modules.BCELoss()
     for e in range(epoch):
         for idx, (minibatch,octave,semitone) in enumerate(GCloader):
-
-
-
             minibatch = minibatch.to(device)
             octave    = octave.to(device)
             semitone  = semitone.to(device)
@@ -252,7 +247,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10, lr=3):
 
             #print(mean.size(), logvar.size(), minibatch.size(),  z.size())
 
-            error = objective(gen, minibatch)
+            error = objective(gen, minibatch, z, .2)
 
             loss_log[e] += error
 
