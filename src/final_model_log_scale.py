@@ -201,7 +201,9 @@ class WAE(nn.Module):
 
     def sample(self, inp, oct, semitone):
         mel = torch.from_numpy(li.filters.mel(22050, 2048, n_mels=500)).float()
-        mel_specto, logvar = self.decode(inp, f)
+        mel_specto, logvar = self.decode(inp, oct, semitone)
+        mel_specto = torch.exp(mel_specto + 1) - 1
+        mel_specto /= torch.max(abs(mel_specto))
         return torch.transpose(mel, 0, 1).mm(mel_specto.squeeze(0))
 
     def forward(self,inp, oct, semitone):
@@ -225,7 +227,7 @@ def compute_mmd(x, y):
     mmd = x_kernel.mean() + y_kernel.mean() - 2*xy_kernel.mean()
     return mmd
 
-def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10, lr=3):
+def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10, lr=3, alpha=1):
     model.train()
     lr = 1*10**(-lr)
     optimizer = torch.optim.Adam(model.parameters(),lr=lr)
@@ -247,7 +249,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10, lr=3):
 
             #print(mean.size(), logvar.size(), minibatch.size(),  z.size())
 
-            error = objective(gen, minibatch, z, .2)
+            error = objective(gen, minibatch, z, alpha)
 
             loss_log[e] += error
 
@@ -322,6 +324,7 @@ if __name__=="__main__":
     parser.add_argument("--process-dataset", type=int, default=0, help="1/0 if Preprocessing needed")
     parser.add_argument("--batch-size", type=int, default=8, help="batch size")
     parser.add_argument("--learning-rate", type=int, default=3, help="Define learning rate (1e-N)")
+    parser.add_argument("--alpha", type=float, default=1, help="Regularization's importance [0-1]")
     args = parser.parse_args()
 
     GC = AudioDataset(files="%s/*.wav" % args.dataset, process=args.process_dataset, slice_size=args.n_trames)
@@ -335,7 +338,7 @@ if __name__=="__main__":
     model = WAE(args.zdim, args.n_trames).to(device)
 
     train(model, GCloader, args.epoch, savefig=True, lr_rate=args.lr_step,
-        nb_update=args.nb_update, lr=args.learning_rate)
+        nb_update=args.nb_update, lr=args.learning_rate, alpha=args.alpha)
     # show_me_how_good_model_is_learning(model, GC, 4)
     # plt.show()
     torch.save(model, "model_%d_epoch.pt"%args.epoch)
