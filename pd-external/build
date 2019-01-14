@@ -76,7 +76,7 @@ SRC_CPP="src/vae_util.cpp src/griffin_lim.cpp"
 INCLUDE="-Isrc -I$FFTW_DIR/api -I$TORCH_DIR/include"
 CFLAGS=""
 CPPFLAGS="-std=c++11"
-LFLAGS="-L./libtorch/lib -ltorch -lcaffe2 -lc10 -L./fftw/.libs -lfftw3f"
+LFLAGS="-L./libtorch/lib -ltorch -lcaffe2 -lc10 -L./fftw/.libs -lfftw3f -lpthread"
 
 if [ $OS = "Darwin" ] ; then
 	LFLAGS="-undefined dynamic_lookup $LFLAGS"

@@ -53,7 +53,7 @@ void GriffinLimISTFT(fftwf_plan plan,
 
 	float normalize = 1./(windowGain*fftSize);
 
-	memset(signalOut, 0, (sliceCount*hopSize+fftSize)*sizeof(float));
+	memset(signalOut, 0, ((sliceCount-1)*hopSize + fftSize)*sizeof(float));
 
 	for(int slice=0; slice<sliceCount; slice++)
 	{
@@ -91,10 +91,10 @@ extern "C" void GriffinLimReconstruct(int iterCount,
 		windowGain :	The gain resulting from overlap-adding the squared window (this is used for gain compensation)
 		magSpectrogram : The input magnitude spectrogram, of dimension (sliceCount , (fftSize/2+1)). The rows are the DFT slices,
 				  the columns are the (fftSize/2+1) DFT bins of a real valued signal.
-		signal :	The output estimated signal, of size (sliceCount*hopSize + fftSize)
+		signal :	The output estimated signal, of size ((sliceCount-1)*hopSize + fftSize)
 
 	*/
-	int sampleCount = sliceCount * hopSize + fftSize;
+	int sampleCount = (sliceCount - 1) * hopSize + fftSize;
 
 	fftwf_complex* spectrogramEstimate = (fftwf_complex*)fftwf_malloc((fftSize/2+1) * sliceCount * sizeof(fftwf_complex));
 	float* signalWork = (float*)fftwf_malloc(sampleCount*sizeof(float));
