@@ -131,8 +131,6 @@ void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 	}
 }
 
-#include<stdio.h>
-
 void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float note)
 {
 	for(int i=0; i<VOICE_COUNT; i++)
@@ -157,22 +155,6 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 	{
 		DEBUG_POST("Got samples from model");
 
-		//DEBUG...
-	#if 1
-		for(int i=0; i<MODEL_SLICE_COUNT;i++)
-		{
-			for(int j=0; j<MODEL_BIN_COUNT; j++)
-			{
-				printf("%f", spectrogram[i*MODEL_BIN_COUNT+j]);
-				if(j != MODEL_BIN_COUNT-1)
-				{
-					printf("; ");
-				}
-			}
-			printf("\n");
-		}
-	#endif
-
 		GriffinLimReconstruct(200,
 				      MODEL_FFT_SIZE,
 				      MODEL_HOP_SIZE,
@@ -181,13 +163,6 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 				      MODEL_OLA_GAIN,
 				      spectrogram,
 				      x->buffers[voice]);
-
-/*
-		for(int i=0; i<SAMPLE_BUFFER_SIZE;i++)
-		{
-			printf("%f ; ", x->buffers[voice][i]);
-		}
-*/
 
 		x->voices[voice].head = HEAD_PLAY_FLAG;
 		x->voices[voice].note = note;

@@ -2,7 +2,7 @@
 #X obj 153 362 vae_sampler~;
 #X obj 153 459 *~;
 #X obj 196 433 hsl 128 15 0 1 0 0 empty empty empty -2 -8 0 10 -262144
--1 -1 12700 1;
+-1 -1 9100 1;
 #X obj 153 491 dac~;
 #X obj 153 72 openpanel;
 #X msg 153 94 load \$1;
@@ -18,7 +18,7 @@
 #X text 320 290 play x0 x1 x2 x3 n : plays a sample with coordinates
 (x0 \, x1 \, x2 \, x3) and Midi note 'n';
 #X msg 172 335 play 0.1157 1.5961 -0.1254 0.7914 \$1;
-#X obj 153 414 *~ 10;
+#X obj 153 414 *~ 2048;
 #X connect 0 0 16 0;
 #X connect 1 0 3 0;
 #X connect 1 0 3 1;
