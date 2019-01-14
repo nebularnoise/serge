@@ -176,7 +176,9 @@ class WAE(nn.Module):
 
         lin1 = nn.Linear(self.flat_number, 1024)
         lin2 = nn.Linear(1024, 256)
-        lin3 = nn.Linear(256, zdim)
+
+        self.lin3_mean   = nn.Linear(256, zdim)
+        self.lin3_logvar = nn.Linear(256, zdim)
 
 
         dlin1 = nn.Linear(zdim+7+12,256)
@@ -205,8 +207,7 @@ class WAE(nn.Module):
         self.e2   = nn.Sequential(lin1,
                                  nn.BatchNorm1d(num_features=1024),act,
                                  lin2,
-                                 nn.BatchNorm1d(num_features=256),act,
-                                 lin3)
+                                 nn.BatchNorm1d(num_features=256),act)
 
         self.d1   = nn.Sequential(dlin1,
                                  act,
@@ -237,7 +238,12 @@ class WAE(nn.Module):
         inp = self.flatten(inp)
         #print(inp.size())
         inp = self.e2(inp)
-        return inp
+
+        mean = self.lin3_mean(inp)
+        logvar = self.lin3_logvar(inp)
+
+
+        return mean + torch.randn_like(logvar)*torch.exp(.5*logvar)
 
     def decode(self, inp, oct, semitone):
         inp = torch.cat([inp, oct, semitone], 1)
