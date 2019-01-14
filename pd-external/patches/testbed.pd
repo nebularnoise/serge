@@ -2,7 +2,7 @@
 #X obj 153 362 vae_sampler~;
 #X obj 153 459 *~;
 #X obj 196 433 hsl 128 15 0 1 0 1 empty empty empty -2 -8 0 10 -262144
--1 -1 10500 1;
+-1 -1 9400 1;
 #X obj 153 491 dac~;
 #X obj 153 72 openpanel;
 #X msg 153 94 load \$1;

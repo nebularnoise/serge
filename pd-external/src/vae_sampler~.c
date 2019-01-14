@@ -12,6 +12,7 @@
 #include"m_pd.h"
 #include"vae_util.h"
 #include"griffin_lim.h"
+#include"profile.h"
 
 //-----------------------------------------------------------------
 // debug printing macros
@@ -23,6 +24,7 @@
 	#define DEBUG_POST(s, ...)
 #endif
 #define ERROR_POST(s, ...) error(s, ##__VA_ARGS__)
+#define POST(s, ...) post(s, ##__VA_ARGS__)
 
 //-----------------------------------------------------------------
 // object definition
@@ -41,7 +43,7 @@
 #define MODEL_OLA_GAIN		3
 #define SAMPLE_BUFFER_SIZE	((MODEL_SLICE_COUNT - 1) * MODEL_HOP_SIZE + MODEL_FFT_SIZE)
 
-#define	VOICE_COUNT		1
+#define	VOICE_COUNT		4
 
 #define GL_BATCH_SLICE_COUNT	32
 #define GL_BATCH_COUNT		(MODEL_SLICE_COUNT / GL_BATCH_SLICE_COUNT)
@@ -58,9 +60,9 @@ static float HANN_WINDOW[MODEL_FFT_SIZE];
 
 typedef struct poly_voice_t
 {
-	volatile float	note;
-	voice_head	head;
-	volatile int	endCursor;
+	volatile float		note;
+	volatile voice_head	head;
+	volatile int		endCursor;
 
 } poly_voice;
 
@@ -228,7 +230,7 @@ void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 	}
 	else
 	{
-		DEBUG_POST("Loaded model %s", sym->s_name);
+		POST("Loaded model %s", sym->s_name);
 	}
 }
 
@@ -252,7 +254,12 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 	{
 		float* spectrogram = x->spectrograms[voiceIndex];
 		int err = 0;
-		if((err = VaeModelGetSpectrogram(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, (int)floorf(note))))
+
+		TIME_BLOCK_START();
+		err = VaeModelGetSpectrogram(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, (int)floorf(note));
+		TIME_BLOCK_END("VaeModelGetSpectrogram()");
+
+		if(err)
 		{
 			ERROR_POST("Failed to get spectrogram from model (%s)...", (err == -1) ? "no module" : "wrong tensor dimensions");
 		}
@@ -272,7 +279,7 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 	}
 	else
 	{
-		DEBUG_POST("Can't allocate a polyphony voice to note %i (%i voices busy)", (int)note, VOICE_COUNT);
+		ERROR_POST("Can't allocate a polyphony voice to note %i (%i voices busy)", (int)note, VOICE_COUNT);
 	}
 }
 

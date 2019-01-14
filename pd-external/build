@@ -77,6 +77,7 @@ INCLUDE="-Isrc -I$FFTW_DIR/api -I$TORCH_DIR/include"
 CFLAGS=""
 CPPFLAGS="-std=c++11"
 LFLAGS="-L./libtorch/lib -ltorch -lcaffe2 -lc10 -L./fftw/.libs -lfftw3f -lpthread"
+OBJECTS="$BUILD_DIR/vae_sampler~.o $BUILD_DIR/vae_util.o $BUILD_DIR/griffin_lim.o"
 
 if [ $OS = "Darwin" ] ; then
 	LFLAGS="-undefined dynamic_lookup $LFLAGS"
@@ -90,6 +91,15 @@ if [ "$DEBUG" = true ] ; then
 	CFLAGS="-g -O0 -DDEBUG $CFLAGS"
 	CPPFLAGS="-g -O0 -DDEBUG $CPPFLAGS"
 	LFLAGS="-g -O0 $LFLAGS"
+else
+	CFLAGS="-O2 $CFLAGS"
+	CPPFLAGS="-O2 $CPPFLAGS"
+	LFLAGS="-O2 $LFLAGS"
+fi
+
+if [ "$PROFILE" = true ] ; then
+	CFLAGS="$CFLAGS -DPROFILE"
+	CPPFLAGS="$CPPFLAGS -DPROFILE"
 fi
 
 echo "Compile c files..."
@@ -100,7 +110,7 @@ $CPP $INCLUDE $CPPFLAGS -o $BUILD_DIR/vae_util.o -c src/vae_util.cpp
 $CPP $INCLUDE $CPPFLAGS -o $BUILD_DIR/griffin_lim.o -c src/griffin_lim.cpp
 
 echo "Link shared object..."
-$CPP -shared -o $BUILD_DIR/$PRODUCT $BUILD_DIR/vae_sampler~.o $BUILD_DIR/vae_util.o $BUILD_DIR/griffin_lim.o $LFLAGS
+$CPP -shared -o $BUILD_DIR/$PRODUCT $LFLAGS $OBJECTS
 
 if [ $OS = "Darwin" ] ; then
 	echo "Patch dependencies install name"

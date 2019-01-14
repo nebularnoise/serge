@@ -7,6 +7,7 @@
 //*****************************************************************
 #include<torch/script.h>
 #include<assert.h>
+#include"profile.h"
 
 //-----------------------------------------------------------------
 // vae_model wrapper struct
@@ -85,7 +86,12 @@ extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, floa
 			torch::Tensor pitchTensor = torch::from_blob(pitchSelector, {1, 12});
 
 			std::vector<at::IValue> v = {coordsTensor, octaveTensor, pitchTensor};
-			torch::Tensor out = model->module->forward(v).toTensor();
+
+			torch::Tensor out;
+
+			TIME_BLOCK_START();
+			out = model->module->forward(v).toTensor();
+			TIME_BLOCK_END("Torch forward");
 
 			auto a = out.accessor<float, 2>();
 			if(count != a.size(0)*a.size(1))
@@ -95,6 +101,7 @@ extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, floa
 
 			int index = 0;
 
+			TIME_BLOCK_START();
 			for(int bin=0; bin<a.size(0); bin++)
 			{
 				for(int slice = 0; slice<a.size(1); slice++)
@@ -107,6 +114,7 @@ extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, floa
 					}
 				}
 			}
+			TIME_BLOCK_END("Copy spectrogram tensor");
 			return(0);
 		}
 		else
