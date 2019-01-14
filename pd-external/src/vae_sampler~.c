@@ -27,6 +27,8 @@
 // object definition
 //-----------------------------------------------------------------
 
+#define GRIFFIN_LIM_ITERATION_COUNT 50
+
 #define MODEL_SLICE_COUNT	128
 #define MODEL_FFT_SIZE		2048
 #define MODEL_BIN_COUNT		1025
@@ -147,15 +149,15 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 	int voice = x->nextVoice;
 	float* spectrogram = x->spectrogram;
 	int err = 0;
-	if((err = VaeModelGetSamples(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, (int)floorf(note))))
+	if((err = VaeModelGetSpectrogram(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, (int)floorf(note))))
 	{
-		ERROR_POST("Failed to get samples from model (%s)...", (err == -1) ? "no module" : "wrong tensor dimensions");
+		ERROR_POST("Failed to get spectrogram from model (%s)...", (err == -1) ? "no module" : "wrong tensor dimensions");
 	}
 	else
 	{
-		DEBUG_POST("Got samples from model");
+		DEBUG_POST("Got spectrogram from model");
 
-		GriffinLimReconstruct(200,
+		GriffinLimReconstruct(GRIFFIN_LIM_ITERATION_COUNT,
 				      MODEL_FFT_SIZE,
 				      MODEL_HOP_SIZE,
 				      MODEL_SLICE_COUNT,

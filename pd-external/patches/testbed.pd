@@ -2,7 +2,7 @@
 #X obj 153 362 vae_sampler~;
 #X obj 153 459 *~;
 #X obj 196 433 hsl 128 15 0 1 0 0 empty empty empty -2 -8 0 10 -262144
--1 -1 9100 1;
+-1 -1 2100 1;
 #X obj 153 491 dac~;
 #X obj 153 72 openpanel;
 #X msg 153 94 load \$1;
@@ -19,6 +19,8 @@
 (x0 \, x1 \, x2 \, x3) and Midi note 'n';
 #X msg 172 335 play 0.1157 1.5961 -0.1254 0.7914 \$1;
 #X obj 153 414 *~ 2048;
+#X obj 38 27 loadbang;
+#X msg 38 59 \; pd dsp 1;
 #X connect 0 0 16 0;
 #X connect 1 0 3 0;
 #X connect 1 0 3 1;
@@ -33,3 +35,4 @@
 #X connect 13 1 12 1;
 #X connect 15 0 0 0;
 #X connect 16 0 1 0;
+#X connect 17 0 18 0;

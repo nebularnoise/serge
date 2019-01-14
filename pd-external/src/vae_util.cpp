@@ -51,7 +51,7 @@ extern "C" int VaeModelLoad(vae_model* model, const char* path)
 
 #define clamp(x, low, hi) ((x) > (hi)) ? (hi) : (((x)<(low))? (low) : (x))
 
-extern "C" int VaeModelGetSamples(vae_model* model, unsigned int count, float* buffer, float c0, float c1, float c2, float c3, int note)
+extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, float* buffer, float c0, float c1, float c2, float c3, int note)
 {
 	try
 	{
@@ -64,6 +64,8 @@ extern "C" int VaeModelGetSamples(vae_model* model, unsigned int count, float* b
 
 			int octave = (note - 21) / 12 ;
 			int pitchClass = (note - 21) - octave*12;
+
+			//TODO(martin): error / assert rather than clamp ?
 
 			octave = clamp(octave, 0, 6);
 			pitchClass = clamp(pitchClass, 0, 11);
