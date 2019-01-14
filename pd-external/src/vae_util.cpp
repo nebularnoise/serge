@@ -48,6 +48,9 @@ extern "C" int VaeModelLoad(vae_model* model, const char* path)
 	return(0);
 }
 
+
+#define clamp(x, low, hi) ((x) > (hi)) ? (hi) : (((x)<(low))? (low) : (x))
+
 extern "C" int VaeModelGetSamples(vae_model* model, unsigned int count, float* buffer, float c0, float c1, float c2, float c3, int note)
 {
 	try
@@ -55,11 +58,15 @@ extern "C" int VaeModelGetSamples(vae_model* model, unsigned int count, float* b
 		if(model->module)
 		{
 			//NOTE(martin): middle C (midi note 60) is C4, so A0 is 21
+
 			float octaveSelector[7] = {0};
 			float pitchSelector[12] = {0};
 
 			int octave = (note - 21) / 12 ;
 			int pitchClass = (note - 21) - octave*12;
+
+			octave = clamp(octave, 0, 6);
+			pitchClass = clamp(pitchClass, 0, 11);
 
 			octaveSelector[octave] = 1;
 			pitchSelector[pitchClass] = 1;
