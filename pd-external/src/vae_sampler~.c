@@ -142,12 +142,12 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 		}
 	}
 
-	DEBUG_POST("Fire : %f %f %f %f, note %i", c0, c1, c2, c3, (int)floor(note));
+	DEBUG_POST("Fire : %f %f %f %f, note %i", c0, c1, c2, c3, (int)floorf(note));
 
 	int voice = x->nextVoice;
 	float* spectrogram = x->spectrogram;
 	int err = 0;
-	if((err = VaeModelGetSamples(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, (int)floor(note))))
+	if((err = VaeModelGetSamples(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, (int)floorf(note))))
 	{
 		ERROR_POST("Failed to get samples from model (%s)...", (err == -1) ? "no module" : "wrong tensor dimensions");
 	}
