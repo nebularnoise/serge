@@ -86,6 +86,12 @@ elif [ $OS = "Linux" ] ; then
 	CPPFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 $CPPFLAGS"
 fi
 
+if [ "$DEBUG" = true ] ; then
+	CFLAGS="-g -O0 -DDEBUG $CFLAGS"
+	CPPFLAGS="-g -O0 -DDEBUG $CPPFLAGS"
+	LFLAGS="-g -O0 $LFLAGS"
+fi
+
 echo "Compile c files..."
 $CC $INCLUDE  $CFLAGS -o $BUILD_DIR/vae_sampler~.o -c src/vae_sampler~.c
 

@@ -71,14 +71,14 @@ void GriffinLimISTFT(fftwf_plan plan,
 	}
 }
 
-void GriffinLimReconstruct(int iterCount,
-			   int fftSize,
-			   int hopSize,
-			   int sliceCount,
-			   float* window,
-			   float windowGain,
-			   float* magSpectrogram,
-			   float* signal)
+extern "C" void GriffinLimReconstruct(int iterCount,
+				      int fftSize,
+				      int hopSize,
+				      int sliceCount,
+				      float* window,
+				      float windowGain,
+				      float* magSpectrogram,
+				      float* signal)
 {
 	/*NOTE(martin)
 		Implements the Griffin-Lim algorithm for reconstructing a signal from a magnitude spectrogram.

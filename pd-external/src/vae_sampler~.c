@@ -5,10 +5,12 @@
 //	$revision: $
 //
 //*****************************************************************
-#include<stdlib.h>
-#include<string.h>
+#include<stdlib.h>	// malloc
+#include<string.h>	// memset
+#include<math.h>	// M_PI, cos, ...
 #include"m_pd.h"
 #include"vae_util.h"
+#include"griffin_lim.h"
 
 //-----------------------------------------------------------------
 // debug printing macros
@@ -25,16 +27,24 @@
 // object definition
 //-----------------------------------------------------------------
 
-#define SAMPLE_BUFFER_SIZE 34560
-#define	VOICE_COUNT        16
+#define MODEL_SLICE_COUNT	128
+#define MODEL_FFT_SIZE		2048
+#define MODEL_BIN_COUNT		1025
+#define MODEL_SPECTROGRAM_SIZE	MODEL_SLICE_COUNT * MODEL_BIN_COUNT
+#define MODEL_HOP_SIZE		MODEL_FFT_SIZE / 8
+#define MODEL_OLA_GAIN		3
+#define SAMPLE_BUFFER_SIZE	MODEL_SLICE_COUNT * MODEL_HOP_SIZE + MODEL_FFT_SIZE
+#define	VOICE_COUNT		16
 
 typedef int voice_head;
 const voice_head HEAD_PLAY_FLAG    = 1<<31,
                  HEAD_COUNTER_MASK = ~(1<<31);
 
+static float HANN_WINDOW[MODEL_FFT_SIZE];
+
 typedef struct poly_voice_t
 {
-	float freq;
+	float note;
 	voice_head head;
 
 } poly_voice;
@@ -47,6 +57,7 @@ typedef struct vae_sampler_t
 	vae_model*	model;
 
 	int		nextVoice;
+	float		spectrogram[MODEL_SPECTROGRAM_SIZE];
 	float		buffers[VOICE_COUNT][SAMPLE_BUFFER_SIZE];
 	poly_voice	voices[VOICE_COUNT];
 
@@ -56,6 +67,15 @@ static	t_class* vae_sampler_class;
 //-----------------------------------------------------------------
 // methods
 //-----------------------------------------------------------------
+
+void Hann(int count, float* windowOut)
+{
+	float invCount = 1./(count-1);
+	for(int i=0; i<count; i++)
+	{
+		windowOut[i] = 0.5*(1 - cos(2*M_PI*i*invCount));
+	}
+}
 
 t_int* vae_sampler_perform(t_int* w)
 {
@@ -83,7 +103,7 @@ t_int* vae_sampler_perform(t_int* w)
 			if(counter >= SAMPLE_BUFFER_SIZE)
 			{
 				voice->head = 0;
-				voice->freq = 0;
+				voice->note = 0;
 			}
 			else
 			{
@@ -111,35 +131,66 @@ void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 	}
 }
 
-void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float freq)
-{
-	float sr = sys_getsr();
-	float nu = freq/sr;
+#include<stdio.h>
 
+void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float note)
+{
 	for(int i=0; i<VOICE_COUNT; i++)
 	{
-		if(x->voices[i].freq == freq)
+		if(x->voices[i].note == note)
 		{
-			//NOTE: the given freq is already playing... (we don't retrigger, but maybe we should ?)
+			//NOTE: the given note is already playing... (we don't retrigger, but maybe we should ?)
 			return;
 		}
 	}
 
-	DEBUG_POST("Fire : %f %f %f %f", c1, c2, c3, nu);
+	DEBUG_POST("Fire : %f %f %f %f, note %i", c0, c1, c2, c3, (int)floor(note));
 
 	int voice = x->nextVoice;
-	float* buffer = x->buffers[voice];
-
-	if(VaeModelGetSamples(x->model, SAMPLE_BUFFER_SIZE, buffer, c0, c1, c2, c3, nu))
+	float* spectrogram = x->spectrogram;
+	int err = 0;
+	if((err = VaeModelGetSamples(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, (int)floor(note))))
 	{
-		ERROR_POST("Failed to get samples from model...");
+		ERROR_POST("Failed to get samples from model (%s)...", (err == -1) ? "no module" : "wrong tensor dimensions");
 	}
 	else
 	{
 		DEBUG_POST("Got samples from model");
 
+		//DEBUG...
+	#if 1
+		for(int i=0; i<MODEL_SLICE_COUNT;i++)
+		{
+			for(int j=0; j<MODEL_BIN_COUNT; j++)
+			{
+				printf("%f", spectrogram[i*MODEL_BIN_COUNT+j]);
+				if(j != MODEL_BIN_COUNT-1)
+				{
+					printf("; ");
+				}
+			}
+			printf("\n");
+		}
+	#endif
+
+		GriffinLimReconstruct(200,
+				      MODEL_FFT_SIZE,
+				      MODEL_HOP_SIZE,
+				      MODEL_SLICE_COUNT,
+				      HANN_WINDOW,
+				      MODEL_OLA_GAIN,
+				      spectrogram,
+				      x->buffers[voice]);
+
+/*
+		for(int i=0; i<SAMPLE_BUFFER_SIZE;i++)
+		{
+			printf("%f ; ", x->buffers[voice][i]);
+		}
+*/
+
 		x->voices[voice].head = HEAD_PLAY_FLAG;
-		x->voices[voice].freq = freq;
+		x->voices[voice].note = note;
 		x->nextVoice++;
 		if(x->nextVoice >= VOICE_COUNT)
 		{
@@ -183,4 +234,6 @@ void vae_sampler_tilde_setup(void)
 	class_addmethod(vae_sampler_class, (t_method)vae_sampler_dsp, gensym("dsp"), A_NULL);
 	class_addmethod(vae_sampler_class, (t_method)vae_sampler_load, gensym("load"), A_SYMBOL, A_NULL);
 	class_addmethod(vae_sampler_class, (t_method)vae_sampler_fire, gensym("play"), A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, A_FLOAT, A_NULL);
+
+	Hann(MODEL_FFT_SIZE, HANN_WINDOW);
 }
