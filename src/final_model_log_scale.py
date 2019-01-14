@@ -31,12 +31,17 @@ def objective(gen,target,z,alpha=1):
     float
         Total loss (MSE + alpha*MMDRBF)
     """
-    mu_g = gen[0]
+    mu_g     = gen[0]
     logvar_g = gen[1]
 
-    rec_error      = torch.mean((gen[0] - target)**2)
+    mu_z     = z[0]
+    logvar_z = z[1]
+    z        = z[2]
+
+    kl_error       = torch.mean(torch.exp(logvar_z) - 1 - logvar_z)
+    rec_error      = torch.mean((mu_g - target)**2)
     regularization = compute_mmd(z, torch.randn_like(z))
-    return rec_error + alpha*regularization
+    return rec_error + alpha*(regularization + kl_error)
 
 class AudioDataset(data.Dataset):
     """Defines an audio data loader
@@ -176,7 +181,9 @@ class WAE(nn.Module):
 
         lin1 = nn.Linear(self.flat_number, 1024)
         lin2 = nn.Linear(1024, 256)
-        lin3 = nn.Linear(256, zdim)
+
+        self.lin3_mean   = nn.Linear(256, zdim)
+        self.lin3_logvar = nn.Linear(256, zdim)
 
 
         dlin1 = nn.Linear(zdim+7+12,256)
@@ -205,8 +212,7 @@ class WAE(nn.Module):
         self.e2   = nn.Sequential(lin1,
                                  nn.BatchNorm1d(num_features=1024),act,
                                  lin2,
-                                 nn.BatchNorm1d(num_features=256),act,
-                                 lin3)
+                                 nn.BatchNorm1d(num_features=256),act)
 
         self.d1   = nn.Sequential(dlin1,
                                  act,
@@ -237,7 +243,12 @@ class WAE(nn.Module):
         inp = self.flatten(inp)
         #print(inp.size())
         inp = self.e2(inp)
-        return inp
+
+        mean = self.lin3_mean(inp)
+        logvar = self.lin3_logvar(inp)
+
+
+        return mean, logvar, mean + torch.randn_like(logvar)*torch.exp(.5*logvar)
 
     def decode(self, inp, oct, semitone):
         inp = torch.cat([inp, oct, semitone], 1)
@@ -266,7 +277,7 @@ class WAE(nn.Module):
         return torch.transpose(mel, 0, 1).mm(mel_specto.squeeze(0))
 
     def forward(self,inp, oct, semitone):
-        return self.decode(self.encode(inp), oct, semitone)
+        return self.decode(self.encode(inp)[2], oct, semitone)
 
 def compute_kernel(x, y):
     x_size = x.size(0)
@@ -325,7 +336,7 @@ def train(model, GCloader, epoch, savefig=False, lr_rate=3, nb_update=10, lr=3, 
 
             z = model.encode(minibatch)
 
-            gen = model.decode(z,octave, semitone)
+            gen = model.decode(z[2],octave, semitone)
 
             #print(mean.size(), logvar.size(), minibatch.size(),  z.size())
 

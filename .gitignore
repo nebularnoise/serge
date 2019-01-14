@@ -23,4 +23,5 @@ bin/*
 */libtorch/
 *.patch
 */fftw*
+*.eps
 */vae_sample*
