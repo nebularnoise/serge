@@ -38,7 +38,7 @@ def objective(gen,target,z,alpha=1):
     logvar_z = z[1]
     z        = z[2]
 
-    kl_error       = torch.exp(logvar_z) - 1 - logvar_z
+    kl_error       = torch.mean(torch.exp(logvar_z) - 1 - logvar_z)
     rec_error      = torch.mean((mu_g - target)**2)
     regularization = compute_mmd(z, torch.randn_like(z))
     return rec_error + alpha*(regularization + kl_error)
