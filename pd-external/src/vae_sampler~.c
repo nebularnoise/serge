@@ -33,7 +33,7 @@
 //TODO(martin): would be much safer with const int (esp. with respect to parenthesing)
 //		but gcc on linux seems to fail when instancing buffers with const length...??
 
-#define GRIFFIN_LIM_ITERATION_COUNT 60
+#define GRIFFIN_LIM_ITERATION_COUNT 40
 
 #define MODEL_SLICE_COUNT	128
 #define MODEL_FFT_SIZE		2048
@@ -43,7 +43,7 @@
 #define MODEL_OLA_GAIN		3
 #define SAMPLE_BUFFER_SIZE	((MODEL_SLICE_COUNT - 1) * MODEL_HOP_SIZE + MODEL_FFT_SIZE)
 
-#define	VOICE_COUNT		4
+#define	VOICE_COUNT		1
 
 #define GL_BATCH_SLICE_COUNT	32
 #define GL_BATCH_COUNT		(MODEL_SLICE_COUNT / GL_BATCH_SLICE_COUNT)
@@ -60,9 +60,10 @@ static float HANN_WINDOW[MODEL_FFT_SIZE];
 
 typedef struct poly_voice_t
 {
-	volatile int		note;
+	volatile int	note;
 	volatile voice_head	head;
-	volatile int		endCursor;
+	volatile int	endCursor;
+	pthread_cond_t	condition;
 
 } poly_voice;
 
@@ -112,12 +113,14 @@ void* StreamGriffinLim(void* x)
 	float batchBuffer[GL_BATCH_SAMPLES];
 	memset(batchBuffer, 0, GL_BATCH_SAMPLES*sizeof(float));
 
+	pthread_mutex_t mutex;
+	pthread_mutex_init(&mutex, 0);	//TODO(martin): where do we destroy this mutex if indeed we need to ?
+
 	while(1)
 	{
-		while(!voice->note)
-		{
-			//NOTE(martin): wait for our voice to be allocated
-		}
+		//NOTE(martin): wait for our voice to be allocated
+		pthread_cond_wait(&(voice->condition), &mutex);
+
 		DEBUG_POST("Wake up worker thread %i for note %i", voiceIndex, voice->note);
 
 		//NOTE(martin): stream griffin lim batches
@@ -148,14 +151,7 @@ void* StreamGriffinLim(void* x)
 			voice->endCursor += GL_BATCH_HOP;
 		}
 		voice->endCursor = SAMPLE_BUFFER_SIZE+1;
-		DEBUG_POST("Worker thread %i finished decoding note %i", voiceIndex, voice->note);
-		while(voice->head)
-		{
-			//NOTE(martin): wait for our sampler to finish reading the buffer
-		}
-		DEBUG_POST("Worker thread %i go to sleep", voiceIndex);
-		voice->endCursor = 0;
-		voice->note = 0;
+		DEBUG_POST("Worker thread %i finished decoding note %i, go to sleep", voiceIndex, voice->note);
 	}
 	return(0);
 }
@@ -209,7 +205,10 @@ t_int* vae_sampler_perform(t_int* w)
 			if(counter >= SAMPLE_BUFFER_SIZE)
 			{
 				DEBUG_POST("Perform routine finished playing voice %i", voiceIndex);
+
 				voice->head = 0;
+				voice->endCursor = 0;
+				voice->note = 0;
 			}
 			else
 			{
@@ -251,13 +250,14 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 		}
 	}
 
-	DEBUG_POST("Play (%f %f %f %f), note %i", c0, c1, c2, c3, note);
 
 	int voiceIndex = x->nextVoice;
 	poly_voice* voice = &(x->voices[voiceIndex]);
 
 	if(!voice->note)
 	{
+		DEBUG_POST("Play (%f %f %f %f), note %i", c0, c1, c2, c3, note);
+
 		float* spectrogram = x->spectrograms[voiceIndex];
 		int err = 0;
 
@@ -281,6 +281,7 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 			voice->endCursor = 0;
 			voice->note = note;
 			voice->head = HEAD_PLAY_FLAG;
+			pthread_cond_signal(&(voice->condition));
 		}
 	}
 	else
@@ -310,8 +311,13 @@ void* vae_sampler_new()
 	{
 		x->workerObjects[i].voiceIndex = i;
 		x->workerObjects[i].sampler = x;
+
+		pthread_cond_init(&(x->voices[i].condition), 0);
 		pthread_create(&(x->workers[i]), 0, StreamGriffinLim, &(x->workerObjects[i]));
 	}
+
+	DEBUG_POST("Create new vae_sampler~ instance");
+	DEBUG_POST("CUDA is %s available", VaeModelHasCuda(x->model) ? "" : "not");
 
 	return((void*)x);
 }
@@ -324,6 +330,7 @@ void vae_sampler_free(vae_sampler* x)
 	for(int i=0; i<VOICE_COUNT; i++)
 	{
 		pthread_cancel(x->workers[i]);
+		pthread_cond_destroy(&(x->voices[i].condition));
 	}
 }
 

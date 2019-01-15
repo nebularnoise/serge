@@ -6,6 +6,7 @@
 //
 //*****************************************************************
 #include<torch/script.h>
+#include<torch/csrc/api/include/torch/cuda.h>
 #include<assert.h>
 #include"profile.h"
 
@@ -15,6 +16,7 @@
 
 typedef struct vae_model_t
 {
+	bool hasCuda;
 	std::shared_ptr<torch::jit::script::Module> module;
 }vae_model;
 
@@ -22,10 +24,16 @@ typedef struct vae_model_t
 // vae_model wrapper functions
 //-----------------------------------------------------------------
 
+extern "C" int VaeModelHasCuda(vae_model* model)
+{
+	return(model ? (model->hasCuda ? 1 : 0) : 0);
+}
+
 extern "C" vae_model* VaeModelCreate()
 {
 	vae_model* model = new vae_model;
 	model->module = 0;
+	model->hasCuda = torch::cuda::is_available();
 	return(model);
 }
 
@@ -41,6 +49,10 @@ extern "C" int VaeModelLoad(vae_model* model, const char* path)
 	try
 	{
 		model->module = torch::jit::load(path);
+		if(model->hasCuda)
+		{
+			model->module->to(at::kCUDA);
+		}
 	}
 	catch(...)
 	{
@@ -81,16 +93,16 @@ extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, floa
 			//		second tensor of dimension (1x7) is an octave one-hot
 			//		third tensor of dimension (1x12) is a pitch class one-hot
 
-			torch::Tensor coordsTensor = torch::from_blob(coordsArray, {1, 4});
-			torch::Tensor octaveTensor = torch::from_blob(octaveSelector, {1, 7});
-			torch::Tensor pitchTensor = torch::from_blob(pitchSelector, {1, 12});
+			torch::Tensor coordsTensor = torch::from_blob(coordsArray, {1, 4}).to(model->hasCuda ? at::kCUDA : at::kCPU);
+			torch::Tensor octaveTensor = torch::from_blob(octaveSelector, {1, 7}).to(model->hasCuda ? at::kCUDA : at::kCPU);
+			torch::Tensor pitchTensor = torch::from_blob(pitchSelector, {1, 12}).to(model->hasCuda ? at::kCUDA : at::kCPU);
 
 			std::vector<at::IValue> v = {coordsTensor, octaveTensor, pitchTensor};
 
 			torch::Tensor out;
 
 			TIME_BLOCK_START();
-			out = model->module->forward(v).toTensor();
+			out = model->module->forward(v).toTensor().to(at::kCPU);
 			TIME_BLOCK_END("Torch forward");
 
 			auto a = out.accessor<float, 2>();

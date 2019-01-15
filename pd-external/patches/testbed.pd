@@ -2,7 +2,7 @@
 #X obj 153 362 vae_sampler~;
 #X obj 153 459 *~;
 #X obj 196 433 hsl 128 15 0 1 0 1 empty empty empty -2 -8 0 10 -262144
--1 -1 9400 1;
+-1 -1 11400 1;
 #X obj 153 491 dac~;
 #X obj 153 72 openpanel;
 #X msg 153 94 load \$1;
@@ -21,6 +21,10 @@
 #X obj 153 414 *~ 2048;
 #X obj 38 27 loadbang;
 #X msg 38 59 \; pd dsp 1;
+#X msg 368 167 63 \, 80 \, 67;
+#X obj 368 195 unpack f f f;
+#X obj 402 220 delay 100;
+#X obj 437 246 delay 200;
 #X connect 0 0 16 0;
 #X connect 1 0 3 0;
 #X connect 1 0 3 1;
@@ -36,3 +40,9 @@
 #X connect 15 0 0 0;
 #X connect 16 0 1 0;
 #X connect 17 0 18 0;
+#X connect 19 0 20 0;
+#X connect 20 0 15 0;
+#X connect 20 1 21 0;
+#X connect 20 2 22 0;
+#X connect 21 0 15 0;
+#X connect 22 0 15 0;
