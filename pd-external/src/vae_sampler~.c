@@ -18,10 +18,16 @@
 // debug printing macros
 //-----------------------------------------------------------------
 
+//NOTE(martin): we provide DEBUG_PRINTF because pd's post methods seems to be thread-unsafe
+//		whereas printf is required to be thread safe by POSIX
+
 #ifdef DEBUG
+	#include<stdio.h>
 	#define DEBUG_POST(s, ...) post(s, ##__VA_ARGS__)
+	#define DEBUG_PRINTF(s, ...) printf(s, ##__VA_ARGS__)
 #else
 	#define DEBUG_POST(s, ...)
+	#define DEBUG_PRINTF(s, ...)
 #endif
 #define ERROR_POST(s, ...) error(s, ##__VA_ARGS__)
 #define POST(s, ...) post(s, ##__VA_ARGS__)
@@ -33,7 +39,11 @@
 //TODO(martin): would be much safer with const int (esp. with respect to parenthesing)
 //		but gcc on linux seems to fail when instancing buffers with const length...??
 
+#ifdef DEBUG
 #define GRIFFIN_LIM_ITERATION_COUNT 40
+#else
+#define GRIFFIN_LIM_ITERATION_COUNT 100
+#endif
 
 #define MODEL_SLICE_COUNT	128
 #define MODEL_FFT_SIZE		2048
@@ -43,7 +53,7 @@
 #define MODEL_OLA_GAIN		3
 #define SAMPLE_BUFFER_SIZE	((MODEL_SLICE_COUNT - 1) * MODEL_HOP_SIZE + MODEL_FFT_SIZE)
 
-#define	VOICE_COUNT		1
+#define	VOICE_COUNT		4
 
 #define GL_BATCH_SLICE_COUNT	32
 #define GL_BATCH_COUNT		(MODEL_SLICE_COUNT / GL_BATCH_SLICE_COUNT)
@@ -61,6 +71,7 @@ static float HANN_WINDOW[MODEL_FFT_SIZE];
 typedef struct poly_voice_t
 {
 	volatile int	note;
+	volatile int	stream;
 	volatile voice_head	head;
 	volatile int	endCursor;
 	pthread_cond_t	condition;
@@ -115,13 +126,18 @@ void* StreamGriffinLim(void* x)
 
 	pthread_mutex_t mutex;
 	pthread_mutex_init(&mutex, 0);	//TODO(martin): where do we destroy this mutex if indeed we need to ?
+	pthread_mutex_lock(&mutex);
 
+	//TODO(martin): eventually, set an exit condition, unlock the mutexes and join the threads uppon exit
 	while(1)
 	{
-		//NOTE(martin): wait for our voice to be allocated
-		pthread_cond_wait(&(voice->condition), &mutex);
+		//NOTE(martin): wait for our voice to be allocated and guard against spurious wakeups
+		while(voice->stream == 0)
+		{
+			pthread_cond_wait(&(voice->condition), &mutex);
+		}
 
-		DEBUG_POST("Wake up worker thread %i for note %i", voiceIndex, voice->note);
+		DEBUG_PRINTF("Wake up worker thread %i for note %i\n", voiceIndex, voice->note);
 
 		//NOTE(martin): stream griffin lim batches
 
@@ -130,6 +146,7 @@ void* StreamGriffinLim(void* x)
 		int batchStart = 0;
 		int samplesStart = 0;
 
+		TIME_BLOCK_START();
 		for(int i=0; i<GL_BATCH_COUNT; i++)
 		{
 			GriffinLimReconstruct(GRIFFIN_LIM_ITERATION_COUNT,
@@ -150,8 +167,11 @@ void* StreamGriffinLim(void* x)
 			batchStart += GL_BATCH_SIZE;
 			voice->endCursor += GL_BATCH_HOP;
 		}
+		TIME_BLOCK_END("Griffin-Lim total");
+
+		voice->stream = 0;
 		voice->endCursor = SAMPLE_BUFFER_SIZE+1;
-		DEBUG_POST("Worker thread %i finished decoding note %i, go to sleep", voiceIndex, voice->note);
+		DEBUG_PRINTF("Worker thread %i finished decoding note %i, go to sleep\n", voiceIndex, voice->note);
 	}
 	return(0);
 }
@@ -204,7 +224,7 @@ t_int* vae_sampler_perform(t_int* w)
 
 			if(counter >= SAMPLE_BUFFER_SIZE)
 			{
-				DEBUG_POST("Perform routine finished playing voice %i", voiceIndex);
+				DEBUG_PRINTF("Perform routine finished playing voice %i\n", voiceIndex);
 
 				voice->head = 0;
 				voice->endCursor = 0;
@@ -245,7 +265,7 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 		if(x->voices[i].note == note)
 		{
 			//NOTE: the given note is already playing... (we don't retrigger, but maybe we should ?)
-			DEBUG_POST("vae_sampler_fire(): note %i is already playing");
+			DEBUG_POST("warning: note %i is already playing", note);
 			return;
 		}
 	}
@@ -281,6 +301,7 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 			voice->endCursor = 0;
 			voice->note = note;
 			voice->head = HEAD_PLAY_FLAG;
+			voice->stream = 1;
 			pthread_cond_signal(&(voice->condition));
 		}
 	}

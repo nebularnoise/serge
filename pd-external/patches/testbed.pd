@@ -15,16 +15,12 @@
 #X obj 172 152 keyboard.mmb;
 #X obj 172 251 spigot;
 #X obj 172 225 unpack f f;
-#X text 320 290 play x0 x1 x2 x3 n : plays a sample with coordinates
+#X text 185 295 play x0 x1 x2 x3 n : plays a sample with coordinates
 (x0 \, x1 \, x2 \, x3) and Midi note 'n';
 #X msg 172 335 play 0.1157 1.5961 -0.1254 0.7914 \$1;
 #X obj 153 414 *~ 2048;
 #X obj 38 27 loadbang;
 #X msg 38 59 \; pd dsp 1;
-#X msg 368 167 63 \, 80 \, 67;
-#X obj 368 195 unpack f f f;
-#X obj 402 220 delay 100;
-#X obj 437 246 delay 200;
 #X connect 0 0 16 0;
 #X connect 1 0 3 0;
 #X connect 1 0 3 1;
@@ -40,9 +36,3 @@
 #X connect 15 0 0 0;
 #X connect 16 0 1 0;
 #X connect 17 0 18 0;
-#X connect 19 0 20 0;
-#X connect 20 0 15 0;
-#X connect 20 1 21 0;
-#X connect 20 2 22 0;
-#X connect 21 0 15 0;
-#X connect 22 0 15 0;
