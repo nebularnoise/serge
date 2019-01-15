@@ -26,7 +26,14 @@ typedef struct vae_model_t
 
 extern "C" int VaeModelHasCuda(vae_model* model)
 {
-	return(model ? (model->hasCuda ? 1 : 0) : 0);
+	if(!model)
+	{
+		return(0);
+	}
+	else
+	{
+		return(model->hasCuda ? 1 : 0);
+	}
 }
 
 extern "C" vae_model* VaeModelCreate()
@@ -37,7 +44,7 @@ extern "C" vae_model* VaeModelCreate()
 	#ifdef NO_CUDA
 		model->hasCuda = false;
 	#else
-		model->hasCuda = torch::cuda::is_available();
+		model->hasCuda = (torch::cuda::device_count() != 0);
 	#endif
 
 	return(model);

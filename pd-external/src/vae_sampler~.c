@@ -10,9 +10,9 @@
 #include<math.h>	// M_PI, cos, ...
 #include<pthread.h>
 #include"m_pd.h"
+#include"profile.h"
 #include"vae_util.h"
 #include"griffin_lim.h"
-#include"profile.h"
 
 //-----------------------------------------------------------------
 // debug printing macros
@@ -300,6 +300,9 @@ void* vae_sampler_new()
 
 	x->out = outlet_new(&x->obj, &s_signal);
 	x->model = VaeModelCreate();
+	DEBUG_POST("Create new vae_sampler~ instance");
+	DEBUG_POST("CUDA is %s available", (VaeModelHasCuda(x->model) != 0) ? "" : "not");
+
 	x->nextVoice = 0;
 	memset(x->spectrograms, 0, VOICE_COUNT * MODEL_SPECTROGRAM_SIZE * sizeof(float));
 	memset(x->buffers, 0, VOICE_COUNT * SAMPLE_BUFFER_SIZE * sizeof(float));
@@ -315,9 +318,6 @@ void* vae_sampler_new()
 		pthread_cond_init(&(x->voices[i].condition), 0);
 		pthread_create(&(x->workers[i]), 0, StreamGriffinLim, &(x->workerObjects[i]));
 	}
-
-	DEBUG_POST("Create new vae_sampler~ instance");
-	DEBUG_POST("CUDA is %s available", VaeModelHasCuda(x->model) ? "" : "not");
 
 	return((void*)x);
 }
