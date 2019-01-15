@@ -42,6 +42,7 @@ extern "C" vae_model* VaeModelCreate()
 	model->module = 0;
 
 	#ifdef NO_CUDA
+		#warning "You disabled CUDA support by defining NO_CUDA"
 		model->hasCuda = false;
 	#else
 		model->hasCuda = (torch::cuda::device_count() != 0);
