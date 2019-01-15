@@ -102,6 +102,11 @@ if [ "$PROFILE" = true ] ; then
 	CPPFLAGS="$CPPFLAGS -DPROFILE"
 fi
 
+if [ "$NO_CUDA" = true ] ; then
+	CFLAGS="$CFLAGS -DNO_CUDA"
+	CPPFLAGS="$CPPFLAGS -DNO_CUDA"
+fi
+
 echo "Compile c files..."
 $CC $INCLUDE  $CFLAGS -o $BUILD_DIR/vae_sampler~.o -c src/vae_sampler~.c
 

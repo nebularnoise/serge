@@ -33,7 +33,13 @@ extern "C" vae_model* VaeModelCreate()
 {
 	vae_model* model = new vae_model;
 	model->module = 0;
-	model->hasCuda = torch::cuda::is_available();
+
+	#ifdef NO_CUDA
+		model->hasCuda = false;
+	#else
+		model->hasCuda = torch::cuda::is_available();
+	#endif
+
 	return(model);
 }
 
