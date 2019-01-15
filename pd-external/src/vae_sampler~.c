@@ -60,7 +60,7 @@ static float HANN_WINDOW[MODEL_FFT_SIZE];
 
 typedef struct poly_voice_t
 {
-	volatile float		note;
+	volatile int		note;
 	volatile voice_head	head;
 	volatile int		endCursor;
 
@@ -118,6 +118,7 @@ void* StreamGriffinLim(void* x)
 		{
 			//NOTE(martin): wait for our voice to be allocated
 		}
+		DEBUG_POST("Wake up worker thread %i for note %i", voiceIndex, voice->note);
 
 		//NOTE(martin): stream griffin lim batches
 
@@ -147,10 +148,12 @@ void* StreamGriffinLim(void* x)
 			voice->endCursor += GL_BATCH_HOP;
 		}
 		voice->endCursor = SAMPLE_BUFFER_SIZE+1;
+		DEBUG_POST("Worker thread %i finished decoding note %i", voiceIndex, voice->note);
 		while(voice->head)
 		{
 			//NOTE(martin): wait for our sampler to finish reading the buffer
 		}
+		DEBUG_POST("Worker thread %i go to sleep", voiceIndex);
 		voice->endCursor = 0;
 		voice->note = 0;
 	}
@@ -205,6 +208,7 @@ t_int* vae_sampler_perform(t_int* w)
 
 			if(counter >= SAMPLE_BUFFER_SIZE)
 			{
+				DEBUG_POST("Perform routine finished playing voice %i", voiceIndex);
 				voice->head = 0;
 			}
 			else
@@ -234,18 +238,20 @@ void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 	}
 }
 
-void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float note)
+void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float fnote)
 {
+	int note = (int)floorf(fnote);
 	for(int i=0; i<VOICE_COUNT; i++)
 	{
 		if(x->voices[i].note == note)
 		{
 			//NOTE: the given note is already playing... (we don't retrigger, but maybe we should ?)
+			DEBUG_POST("vae_sampler_fire(): note %i is already playing");
 			return;
 		}
 	}
 
-	DEBUG_POST("Play (%f %f %f %f), note %i", c0, c1, c2, c3, (int)floorf(note));
+	DEBUG_POST("Play (%f %f %f %f), note %i", c0, c1, c2, c3, note);
 
 	int voiceIndex = x->nextVoice;
 	poly_voice* voice = &(x->voices[voiceIndex]);
@@ -256,7 +262,7 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 		int err = 0;
 
 		TIME_BLOCK_START();
-		err = VaeModelGetSpectrogram(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, (int)floorf(note));
+		err = VaeModelGetSpectrogram(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, note);
 		TIME_BLOCK_END("VaeModelGetSpectrogram()");
 
 		if(err)
