@@ -110,7 +110,7 @@ $CPP $INCLUDE $CPPFLAGS -o $BUILD_DIR/vae_util.o -c src/vae_util.cpp
 $CPP $INCLUDE $CPPFLAGS -o $BUILD_DIR/griffin_lim.o -c src/griffin_lim.cpp
 
 echo "Link shared object..."
-$CPP -shared -o $BUILD_DIR/$PRODUCT $LFLAGS $OBJECTS
+$CPP -shared -o $BUILD_DIR/$PRODUCT $OBJECTS $LFLAGS
 
 if [ $OS = "Darwin" ] ; then
 	echo "Patch dependencies install name"
