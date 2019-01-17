@@ -27,7 +27,7 @@ PRODUCT=$PROJECT$SUFFIX
 # Check our dependencies directories
 ########################################
 
-if [ -n $TORCH_DIR ] ; then
+if [ -z "$TORCH_DIR" ] ; then
 	if [ -d ./libtorch ] ; then
 		TORCH_DIR=./libtorch
 	else
@@ -36,7 +36,26 @@ if [ -n $TORCH_DIR ] ; then
 	fi
 fi
 
-if [ -n $FFTW_DIR ] ; then
+if [ "$CUDA" = true ] ; then
+	if [ -z "$CUDNN_DIR" ] ; then
+		if [ -d ./cuda ] ; then
+			CUDNN_DIR=./cuda
+		else
+			echo "Can't find cuDNN directory, please set variable CUDNN_DIR to the cuDNN directory path"
+			exit -1
+		fi
+	fi
+
+	if [ ! -e "$TORCH_DIR"/lib/libc10_cuda.so ] ; then
+		echo "WARNING: you are compiling with CUDA support but it seems you are using a CPU version of libtorch !! It probably won't compile at all..."
+	fi
+else
+	if [ -e "$TORCH_DIR"/lib/libc10_cuda.so ] ; then
+			echo "WARNING: you are compiling without CUDA support but it seems you are using a GPU version of libtorch !! It migth make the external instable..."
+	fi
+fi
+
+if [ -z "$FFTW_DIR" ] ; then
 	if [ -d ./fftw ] ; then
 		FFTW_DIR=./fftw
 	else
@@ -73,18 +92,26 @@ fi
 
 SRC_C="src/vae_sampler~.c"
 SRC_CPP="src/vae_util.cpp src/griffin_lim.cpp"
-INCLUDE="-Isrc -I$FFTW_DIR/api -I$TORCH_DIR/include"
+INCLUDE="-Isrc -I$FFTW_DIR/api -I$TORCH_DIR/include -I$TORCH_DIR/include/torch/csrc/api/include -I$CUDNN_DIR/include"
 CFLAGS=""
-CPPFLAGS="-std=c++11"
-LFLAGS="-L./libtorch/lib -ltorch -lcaffe2 -lc10 -L./fftw/.libs -lfftw3f -lpthread"
+CPPFLAGS="-std=c++11 -std=gnu++11"
 OBJECTS="$BUILD_DIR/vae_sampler~.o $BUILD_DIR/vae_util.o $BUILD_DIR/griffin_lim.o"
 
 if [ $OS = "Darwin" ] ; then
-	LFLAGS="-undefined dynamic_lookup $LFLAGS"
+	CUDA=false;
+	LFLAGS="-undefined dynamic_lookup -L$TORCH_DIR/lib -ltorch -lcaffe2 -lc10 -L./fftw/.libs -lfftw3f -lpthread"
+
 elif [ $OS = "Linux" ] ; then
-	LFLAGS="-fPIC -Wl,-rpath,\$ORIGIN/lib $LFLAGS"
-	CFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 $CFLAGS"
-	CPPFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 $CPPFLAGS"
+
+	if [ "$CUDA" = true ] ; then
+		CFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -DUSE_CUDA $CFLAGS"
+		CPPFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -DUSE_CUDA $CPPFLAGS"
+		LFLAGS="-fPIC -Wl,-rpath,\$ORIGIN/lib -L$TORCH_DIR/lib -L/usr/lib/x86_64-linux-gnu/ -L$CUDNN_DIR/lib64 -ltorch -lcuda -lnvrtc -lnvToolsExt -Wl,-Bstatic -lcudart_static -Wl,-Bdynamic -lpthread -ldl -lrt -lcaffe2 -lcaffe2_gpu -lc10_cuda -lc10 -lcufft -lcurand -lcudnn -lculibos -lcublas -lcublas_device -lcudart_static -L$FFTW_DIR/.libs -lfftw3f -lpthread -ldl -lrt"
+	else
+		CFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 $CFLAGS"
+		CPPFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 $CPPFLAGS"
+		LFLAGS="-fPIC -Wl,-rpath,\$ORIGIN/lib -L$TORCH_DIR/lib -ltorch -lcaffe2 -lc10 -L$FFTW_DIR/.libs -lfftw3f -lpthread"
+	fi
 fi
 
 if [ "$DEBUG" = true ] ; then
@@ -102,10 +129,6 @@ if [ "$PROFILE" = true ] ; then
 	CPPFLAGS="$CPPFLAGS -DPROFILE"
 fi
 
-if [ "$NO_CUDA" = true ] ; then
-	CFLAGS="$CFLAGS -DNO_CUDA"
-	CPPFLAGS="$CPPFLAGS -DNO_CUDA"
-fi
 
 echo "Compile c files..."
 $CC $INCLUDE  $CFLAGS -o $BUILD_DIR/vae_sampler~.o -c src/vae_sampler~.c
@@ -128,5 +151,9 @@ fi
 echo "Bundle the external with its dependencies..."
 
 cp "$TORCH_DIR"/lib/* "$BUILD_DIR"/lib
+
+if [ "$CUDA" = true ] ; then
+	cp "$CUDNN_DIR"/lib64/* "$BUILD_DIR"/lib
+fi ;
 cp "$PATCH_DIR"/*.pd "$BUILD_DIR"/
 rm "$BUILD_DIR"/*.o

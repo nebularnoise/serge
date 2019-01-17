@@ -41,11 +41,18 @@ extern "C" vae_model* VaeModelCreate()
 	vae_model* model = new vae_model;
 	model->module = 0;
 
-	#ifdef NO_CUDA
-		#warning "You disabled CUDA support by defining NO_CUDA"
+	#ifndef USE_CUDA
+		#warning "CUDA support is disabled by default. You can add CUDA support by defining CUDA=true"
 		model->hasCuda = false;
 	#else
-		model->hasCuda = (torch::cuda::device_count() != 0);
+		try
+		{
+			model->hasCuda = (torch::cuda::device_count() != 0);
+		}
+		catch(...)
+		{
+			model->hasCuda = false;
+		}
 	#endif
 
 	return(model);
