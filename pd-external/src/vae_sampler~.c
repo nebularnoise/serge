@@ -30,6 +30,7 @@
 	#define DEBUG_PRINTF(s, ...)
 #endif
 #define ERROR_POST(s, ...) error(s, ##__VA_ARGS__)
+#define ERROR_PRINTF(s, ...) fprintf(stderr, s, ##__VA_ARGS__)
 #define POST(s, ...) post(s, ##__VA_ARGS__)
 
 //-----------------------------------------------------------------
@@ -75,6 +76,7 @@ typedef struct poly_voice_t
 	volatile voice_head	head;
 	volatile int	endCursor;
 	pthread_cond_t	condition;
+	float c0, c1, c2, c3;
 
 } poly_voice;
 
@@ -139,9 +141,30 @@ void* StreamGriffinLim(void* x)
 
 		DEBUG_PRINTF("Wake up worker thread %i for note %i\n", voiceIndex, voice->note);
 
-		//NOTE(martin): stream griffin lim batches
-
 		memset(samplesBuffer, 0, SAMPLE_BUFFER_SIZE*sizeof(float));
+
+		int err = 0;
+		TIME_BLOCK_START();
+		err = VaeModelGetSpectrogram(sampler->model, MODEL_SPECTROGRAM_SIZE, spectrogram, voice->c0, voice->c1, voice->c2, voice->c3, voice->note);
+		TIME_BLOCK_END("VaeModelGetSpectrogram()");
+
+		if(err)
+		{
+			ERROR_PRINTF("Failed to get spectrogram from model (%s)...", (err == -1) ? "no module" : "wrong tensor dimensions");
+
+			//NOTE(martin): we exit early if the model could not load the samples. The dsp thread will read an empty frame
+			//		so the voice stays busy, but exiting and deallocating the voice early would make the threading
+			//		model more complex.
+			voice->stream = 0;
+			voice->endCursor = SAMPLE_BUFFER_SIZE+1;
+			continue;
+		}
+		else
+		{
+			DEBUG_PRINTF("Got spectrogram from model");
+		}
+
+		//NOTE(martin): stream griffin lim batches
 
 		int batchStart = 0;
 		int samplesStart = 0;
@@ -278,32 +301,22 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c
 	{
 		DEBUG_POST("Play (%f %f %f %f), note %i", c0, c1, c2, c3, note);
 
-		float* spectrogram = x->spectrograms[voiceIndex];
-		int err = 0;
-
-		TIME_BLOCK_START();
-		err = VaeModelGetSpectrogram(x->model, MODEL_SPECTROGRAM_SIZE, spectrogram, c0, c1, c2, c3, note);
-		TIME_BLOCK_END("VaeModelGetSpectrogram()");
-
-		if(err)
+		x->nextVoice++;
+		if(x->nextVoice >= VOICE_COUNT)
 		{
-			ERROR_POST("Failed to get spectrogram from model (%s)...", (err == -1) ? "no module" : "wrong tensor dimensions");
+			x->nextVoice = 0;
 		}
-		else
-		{
-			DEBUG_POST("Got spectrogram from model");
+		voice->endCursor = 0;
+		voice->note = note;
 
-			x->nextVoice++;
-			if(x->nextVoice >= VOICE_COUNT)
-			{
-				x->nextVoice = 0;
-			}
-			voice->endCursor = 0;
-			voice->note = note;
-			voice->head = HEAD_PLAY_FLAG;
-			voice->stream = 1;
-			pthread_cond_signal(&(voice->condition));
-		}
+		voice->c0 = c0;
+		voice->c1 = c1;
+		voice->c2 = c2;
+		voice->c3 = c3;
+
+		voice->head = HEAD_PLAY_FLAG;
+		voice->stream = 1;
+		pthread_cond_signal(&(voice->condition));
 	}
 	else
 	{
