@@ -1,0 +1,8 @@
+Compiling
+
+c++   -I../libtorch/include -I../libtorch/include/torch/csrc/api/include -I../cuda/include -D_GLIBCXX_USE_CXX11_ABI=0 -std=c++11 -std=gnu++11 -o object.o -c source.cpp
+
+
+Linking
+
+c++ -rdynamic object.o  -o sharedLib -Wl,-rpath,../libtorch/lib:../cuda/lib64 ../libtorch/lib/libtorch.so -lcuda -lnvrtc -lnvToolsExt -Wl,-Bstatic -lcudart_static -Wl,-Bdynamic -lpthread -ldl -lrt -Wl,--no-as-needed,../libtorch/lib/libcaffe2.so -Wl,--as-needed -Wl,--no-as-needed,../libtorch/lib/libcaffe2_gpu.so -Wl,--as-needed ../libtorch/lib/libc10_cuda.so ../libtorch/lib/libcaffe2.so ../libtorch/lib/libc10.so -lcufft /usr/lib/x86_64-linux-gnu/libcurand.so ../cuda/lib64/libcudnn.so /usr/local/cuda/lib64/libculibos.a -lcublas -Wl,-Bstatic -lcublas_device -lcudart_static -Wl,-Bdynamic -lpthread -ldl -lrt
