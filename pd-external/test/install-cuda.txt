@@ -1,0 +1,35 @@
+instal cuda driver (if not already installed):
+
+sudo apt-get install nvidia-390 nvidia-modprobe nvidia-settings
+sudo reboot
+
+install cuda toolkit :
+
+sudo apt install nvidia-cuda-toolkit
+
+install cuDNN :
+
+Create a developer account, download cuDNN at https://developer.nvidia.com/compute/machine-learning/cudnn/secure/v7.4.2/prod/9.0_20181213/cudnn-9.0-linux-x64-v7.4.2.24.tgz and unzip.
+
+Run cmake :
+
+cmake -DCMAKE_PREFIX_PATH=$(cd ../../libtorch ; pwd)";"$(cd ../../cuda ; pwd) -DCUDA_HOST_COMPILER=/usr/bin/clang ..
+
+Then, do some bellydancing :
+
+find the location of libculibos.a :
+
+sudo find / -name libculibos.a
+
+Edit CMakeFiles/example-app.dir/build.make, and replace /usr/local/cuda/lib64/libculibos.a with the real location of libulibos.a 
+
+AND copy libculibos.a at /usr/local/cuda/lib64
+
+then run make
+
+
+
+
+
+
+
