@@ -1,3 +1,4 @@
+#author: Antoine CAILLON
 import numpy as np
 import librosa as li
 import matplotlib.pyplot as plt
