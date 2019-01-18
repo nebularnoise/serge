@@ -140,6 +140,12 @@ class AudioDataset(data.Dataset):
 
         return S
 
+class MtoF(nn.Module):
+    def __init__(self):
+        super(MtoF, self).__init__()
+        self.mel = torch.zeros([2048,500])
+    def forward(self, inp):
+        return torch.mm(self.mel, inp)
 
 class WAE(nn.Module):
     """Defines a WAE Module
@@ -162,8 +168,14 @@ class WAE(nn.Module):
     n_trames: int
         size of mel-spectrogram slices (default to 128, not really tried)
     """
+
     def __init__(self, zdim, n_trames):
         super(WAE,self).__init__()
+
+        self.mel = MtoF()
+
+        self.mel.mtof = torch.from_numpy(li.filters.mel(22050, 2048, n_mels=500).T).float()
+
         size = [1, 16, 32, 64, 128, 256]
 
         self.flat_number = int(256*16*n_trames/32)
@@ -271,11 +283,11 @@ class WAE(nn.Module):
         """
         Given a latent point and a octave + semitone onehot, return a lin-specto
         """
-        mel = torch.from_numpy(li.filters.mel(22050, 2048, n_mels=500)).float()
+
         mel_specto, logvar = self.decode(inp, oct, semitone)
         mel_specto = torch.exp(mel_specto + 1) - 1
         mel_specto /= torch.max(abs(mel_specto))
-        return torch.transpose(mel, 0, 1).mm(mel_specto.squeeze(0))
+        return self.mel(mel_specto)
 
     def forward(self,inp, oct, semitone):
         return self.decode(self.encode(inp)[2], oct, semitone)
