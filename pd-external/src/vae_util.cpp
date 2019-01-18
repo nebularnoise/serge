@@ -9,6 +9,7 @@
 #include<torch/csrc/api/include/torch/cuda.h>
 #include<assert.h>
 #include"profile.h"
+#include"vae_util.h"
 
 //-----------------------------------------------------------------
 // vae_model wrapper struct
@@ -19,6 +20,8 @@ typedef struct vae_model_t
 	bool hasCuda;
 	torch::Device device;
 	std::shared_ptr<torch::jit::script::Module> module;
+
+	vae_model_t():device(torch::kCPU){}
 }vae_model;
 
 //-----------------------------------------------------------------
