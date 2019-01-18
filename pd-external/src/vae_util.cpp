@@ -135,8 +135,9 @@ extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, floa
 			out = model->module->forward(v).toTensor().to(torch::Device(torch::kCPU));
 			TIME_BLOCK_END("Torch forward");
 		}
-		catch(...)
+		catch(const std::exception& e)
 		{
+			printf("%s\n", e.what());
 			return(VAE_MODEL_THROW);
 		}
 
