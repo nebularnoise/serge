@@ -1,3 +1,4 @@
+#author: Antoine CAILLON
 import librosa as li
 import torch
 import numpy as np

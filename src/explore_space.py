@@ -1,3 +1,4 @@
+#autor Antoine CAILLON
 import argparse
 import mido
 import torch
