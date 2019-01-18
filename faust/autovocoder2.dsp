@@ -1,3 +1,4 @@
+// Author: Thibault Geoffroy
 import("stdfaust.lib");
 nbands = 8;
 atk = 0.1;

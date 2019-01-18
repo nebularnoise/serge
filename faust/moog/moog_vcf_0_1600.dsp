@@ -1,3 +1,4 @@
+// Author: Thibault Geoffroy
 import("stdfaust.lib");
 res = 0;
 freq = 1600;

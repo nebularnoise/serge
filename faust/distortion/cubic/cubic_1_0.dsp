@@ -1,3 +1,4 @@
+// Author: Thibault Geoffroy
 import("stdfaust.lib");
 drive = 1;
 offset = 0;
