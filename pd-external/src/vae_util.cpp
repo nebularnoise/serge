@@ -17,6 +17,7 @@
 typedef struct vae_model_t
 {
 	bool hasCuda;
+	torch::Device device;
 	std::shared_ptr<torch::jit::script::Module> module;
 }vae_model;
 
@@ -48,6 +49,14 @@ extern "C" vae_model* VaeModelCreate()
 		try
 		{
 			model->hasCuda = (torch::cuda::device_count() != 0);
+			if(model->hasCuda)
+			{
+				model->device = torch::Device(torch::kCUDA);
+			}
+			else
+			{
+				model->device = torch::Device(torch::kCPU);
+			}
 		}
 		catch(...)
 		{
@@ -70,10 +79,7 @@ extern "C" int VaeModelLoad(vae_model* model, const char* path)
 	try
 	{
 		model->module = torch::jit::load(path);
-		if(model->hasCuda)
-		{
-			model->module->to(at::kCUDA);
-		}
+		model->module->to(model->device);
 	}
 	catch(...)
 	{
@@ -87,76 +93,76 @@ extern "C" int VaeModelLoad(vae_model* model, const char* path)
 
 extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, float* buffer, float c0, float c1, float c2, float c3, int note)
 {
-	try
+	if(model->module)
 	{
-		if(model->module)
+		//NOTE(martin): middle C (midi note 60) is C4, so A0 is 21
+
+		float octaveSelector[7] = {0};
+		float pitchSelector[12] = {0};
+
+		int octave = (note - 21) / 12 ;
+		int pitchClass = (note - 21) - octave*12;
+
+		//TODO(martin): error / assert rather than clamp ?
+
+		octave = clamp(octave, 0, 6);
+		pitchClass = clamp(pitchClass, 0, 11);
+
+		octaveSelector[octave] = 1;
+		pitchSelector[pitchClass] = 1;
+
+		float coordsArray[4] = {c0, c1, c2, c3};
+
+		//NOTE(martin): the model takes 3 tensor as input
+		//		first tensor of dimension (1x4) is the latent space coordinates
+		//		second tensor of dimension (1x7) is an octave one-hot
+		//		third tensor of dimension (1x12) is a pitch class one-hot
+
+		torch::Tensor coordsTensor = torch::from_blob(coordsArray, {1, 4}).to(model->device);
+		torch::Tensor octaveTensor = torch::from_blob(octaveSelector, {1, 7}).to(model->device);
+		torch::Tensor pitchTensor = torch::from_blob(pitchSelector, {1, 12}).to(model->device);
+
+		std::vector<at::IValue> v = {coordsTensor, octaveTensor, pitchTensor};
+
+		torch::Tensor out;
+
+		try
 		{
-			//NOTE(martin): middle C (midi note 60) is C4, so A0 is 21
-
-			float octaveSelector[7] = {0};
-			float pitchSelector[12] = {0};
-
-			int octave = (note - 21) / 12 ;
-			int pitchClass = (note - 21) - octave*12;
-
-			//TODO(martin): error / assert rather than clamp ?
-
-			octave = clamp(octave, 0, 6);
-			pitchClass = clamp(pitchClass, 0, 11);
-
-			octaveSelector[octave] = 1;
-			pitchSelector[pitchClass] = 1;
-
-			float coordsArray[4] = {c0, c1, c2, c3};
-
-			//NOTE(martin): the model takes 3 tensor as input
-			//		first tensor of dimension (1x4) is the latent space coordinates
-			//		second tensor of dimension (1x7) is an octave one-hot
-			//		third tensor of dimension (1x12) is a pitch class one-hot
-
-			torch::Tensor coordsTensor = torch::from_blob(coordsArray, {1, 4}).to(model->hasCuda ? at::kCUDA : at::kCPU);
-			torch::Tensor octaveTensor = torch::from_blob(octaveSelector, {1, 7}).to(model->hasCuda ? at::kCUDA : at::kCPU);
-			torch::Tensor pitchTensor = torch::from_blob(pitchSelector, {1, 12}).to(model->hasCuda ? at::kCUDA : at::kCPU);
-
-			std::vector<at::IValue> v = {coordsTensor, octaveTensor, pitchTensor};
-
-			torch::Tensor out;
-
 			TIME_BLOCK_START();
-			out = model->module->forward(v).toTensor().to(at::kCPU);
+			out = model->module->forward(v).toTensor().to(torch::Device(torch::kCPU));
 			TIME_BLOCK_END("Torch forward");
+		}
+		catch(...)
+		{
+			return(VAE_MODEL_THROW);
+		}
 
-			auto a = out.accessor<float, 2>();
-			if(count != a.size(0)*a.size(1))
+		auto a = out.accessor<float, 2>();
+		if(count != a.size(0)*a.size(1))
+		{
+			return(-2);
+		}
+
+		int index = 0;
+
+		TIME_BLOCK_START();
+		for(int bin=0; bin<a.size(0); bin++)
+		{
+			for(int slice = 0; slice<a.size(1); slice++)
 			{
-				return(-2);
-			}
-
-			int index = 0;
-
-			TIME_BLOCK_START();
-			for(int bin=0; bin<a.size(0); bin++)
-			{
-				for(int slice = 0; slice<a.size(1); slice++)
+				buffer[slice * a.size(0) + bin] = a[bin][slice];
+				index++;
+				if(index > count)
 				{
-					buffer[slice * a.size(0) + bin] = a[bin][slice];
-					index++;
-					if(index > count)
-					{
-						return(-2);
-					}
+					return(VAE_MODEL_BAD_SIZE);
 				}
 			}
-			TIME_BLOCK_END("Copy spectrogram tensor");
-			return(0);
 		}
-		else
-		{
-			return(-1);
-		}
+		TIME_BLOCK_END("Copy spectrogram tensor");
+		return(VAE_MODEL_OK);
 	}
-	catch(...)
+	else
 	{
-		assert(0);
+		return(VAE_MODEL_NOT_LOADED);
 	}
 }

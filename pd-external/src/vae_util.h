@@ -12,6 +12,12 @@
 // vae_model wrapper
 //-----------------------------------------------------------------
 
+#define VAE_MODEL_OK		0
+#define VAE_MODEL_NOT_LOADED	-1
+#define VAE_MODEL_BAD_SIZE	-2
+#define VAE_MODEL_THROW		-3
+
+
 typedef struct vae_model_t vae_model;
 
 vae_model* VaeModelCreate();

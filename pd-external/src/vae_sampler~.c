@@ -150,7 +150,19 @@ void* StreamGriffinLim(void* x)
 
 		if(err)
 		{
-			ERROR_PRINTF("Failed to get spectrogram from model (%s)...", (err == -1) ? "no module" : "wrong tensor dimensions");
+			ERROR_PRINTF("Failed to get spectrogram from model ");
+			switch(err)
+			{
+				case VAE_MODEL_NOT_LOADED:
+					ERROR_PRINTF("(model not loaded)...\n");
+					break;
+				case VAE_MODEL_BAD_SIZE:
+					ERROR_PRINTF("(bad tensor sizes)...\n");
+					break;
+				case VAE_MODEL_THROW:
+					ERROR_PRINTF("(torch script exception)...\n");
+					break;
+			}
 
 			//NOTE(martin): we exit early if the model could not load the samples. The dsp thread will read an empty frame
 			//		so the voice stays busy, but exiting and deallocating the voice early would make the threading
