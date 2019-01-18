@@ -8,7 +8,7 @@ import numpy as np
 import wave
 import scipy
 import scipy.signal
-from pylab import *
+from math import *
 import array
 import os
 from os.path import expanduser

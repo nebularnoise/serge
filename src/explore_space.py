@@ -29,8 +29,8 @@ x = torch.Tensor([0,0,0,0]).unsqueeze(0).to(device)
 o = torch.zeros([1,7]).to(device)
 s = torch.zeros([1,12]).to(device)
 
-ri,fs = li.load("ri.wav", sr=22050)
-
+#ri,fs = li.load("ri.wav", sr=22050)
+fs = 22050
 
 with mido.open_input(key) as inport:
     print("Go!")
