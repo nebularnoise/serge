@@ -1,6 +1,7 @@
+# author: Martin Fouilleul
+
 import numpy as np
 import griffin_lim as gl
-import audio_utilities as au
 import time as tm
 
 # Build test signal
@@ -12,7 +13,7 @@ n_samples = int(fe * length_seconds)
 f0 = 440. / fe
 
 x_ref = 0.5 * np.sin(2 * np.pi * f0 * np.arange(0, n_samples))
-x_ref += 0.1* np.sin(2 * np.pi * 2 * f0 * np.arange(0, n_samples))
+x_ref += 0.1 * np.sin(2 * np.pi * 2 * f0 * np.arange(0, n_samples))
 x_ref += 0.1 * np.sin(2 * np.pi * 3 * f0 * np.arange(0, n_samples))
 
 # Compute stft and stft magnitude
@@ -31,11 +32,6 @@ x_reconstruct = gl.griffin_lim_reconstruct(
     spectrum_mag, window, hop_size, 100)
 custom_gl_time = tm.perf_counter() - start
 
-start = tm.perf_counter()
-x_reconstruct_au = au.reconstruct_signal_griffin_lim(spectrum_mag, n_fft, hop_size, 100)
-au_gl_time = tm.perf_counter() - start
-
 # Print times :
 
-print("custom gl time : " + str(custom_gl_time))
-print("au gl time : " + str(au_gl_time))
+print("time : " + str(custom_gl_time))
