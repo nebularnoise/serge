@@ -1,0 +1,55 @@
+#N canvas 218 319 748 410 10;
+#X obj 175 301 bp~;
+#X obj 182 218 unpack f f;
+#X obj 10 261 phasor~;
+#X obj 165 371 dac~;
+#X obj 176 341 *~ 0.2;
+#X floatatom 10 226 5 0 0 0 - - -;
+#X obj 182 70 xysl 0 1000 0 1;
+#X floatatom 182 246 5 0 0 0 - - -;
+#X floatatom 239 246 5 0 0 0 - - -;
+#X obj 10 72 xysl 100 800 0 0.3;
+#X obj 10 200 unpack f f;
+#X floatatom 67 225 5 0 0 0 - - -;
+#X obj 333 35 cnv 15 365 43 empty empty XY-SLIDER 100 23 1 20 -260818
+-66577 0;
+#X obj 333 78 cnv 15 365 201 empty empty (xysl) 212 -23 1 21 -233017
+-66577 0;
+#X text 336 139 * Hold down the SHIFT key to move just one variable
+;
+#X text 336 117 * Hold down the CTL key to jump to a position;
+#X text 334 251 * xysl has a resolution of 100 x 100;
+#X text -7 167 0;
+#X text -13 56 0.3;
+#X text -30 114 volume;
+#X text 45 172 pitch;
+#X text 11 172 100;
+#X text 91 172 800;
+#X text 167 170 0;
+#X text 167 113 Q;
+#X text 168 65 1;
+#X text 188 171 center freq;
+#X text 266 172 1000;
+#X text 338 82 * Control two variables at once by dragging on the coordinate
+matrix;
+#X text 336 158 * Deafault limits are from 0 to 1 To set new limits
+\, use creation arguments. ie to set x from 20 to 30 and y from 0.1
+to 0.2 \, create object "xysl 20 30 0.1 0.2";
+#X text 335 204 * Use creation argument "c0" to disable the color fading.
+To set c0 as default \, open the patch and follow the instructions.
+;
+#X text 570 371 Liam Goodacre \, 2014;
+#X connect 0 0 4 0;
+#X connect 1 0 7 0;
+#X connect 1 1 8 0;
+#X connect 2 0 0 0;
+#X connect 4 0 3 1;
+#X connect 4 0 3 0;
+#X connect 5 0 2 0;
+#X connect 6 0 1 0;
+#X connect 7 0 0 1;
+#X connect 8 0 0 2;
+#X connect 9 0 10 0;
+#X connect 10 0 5 0;
+#X connect 10 1 11 0;
+#X connect 11 0 4 1;

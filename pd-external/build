@@ -155,5 +155,5 @@ cp "$TORCH_DIR"/lib/* "$BUILD_DIR"/lib
 if [ "$CUDA" = true ] ; then
 	cp "$CUDNN_DIR"/lib64/* "$BUILD_DIR"/lib
 fi ;
-cp "$PATCH_DIR"/*.pd "$BUILD_DIR"/
+
 rm "$BUILD_DIR"/*.o

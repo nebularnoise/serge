@@ -2,6 +2,7 @@
 //
 //	$file: vae_util.cpp $
 //	$date: 02/01/2019 $
+//	$author: Martin Fouilleul $
 //	$revision: $
 //
 //*****************************************************************
@@ -84,8 +85,9 @@ extern "C" int VaeModelLoad(vae_model* model, const char* path)
 		model->module = torch::jit::load(path);
 		model->module->to(model->device);
 	}
-	catch(...)
+	catch(const std::exception& e)
 	{
+		printf("%s\n", e.what());
 		return(-1);
 	}
 	return(0);
@@ -144,10 +146,8 @@ extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, floa
 		auto a = out.accessor<float, 2>();
 		if(count != a.size(0)*a.size(1))
 		{
-			return(-2);
+			return(VAE_MODEL_BAD_SIZE);
 		}
-
-		int index = 0;
 
 		TIME_BLOCK_START();
 		for(int bin=0; bin<a.size(0); bin++)
@@ -155,11 +155,6 @@ extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, floa
 			for(int slice = 0; slice<a.size(1); slice++)
 			{
 				buffer[slice * a.size(0) + bin] = a[bin][slice];
-				index++;
-				if(index > count)
-				{
-					return(VAE_MODEL_BAD_SIZE);
-				}
 			}
 		}
 		TIME_BLOCK_END("Copy spectrogram tensor");

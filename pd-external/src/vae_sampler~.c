@@ -2,6 +2,7 @@
 //
 //	$file: vae_sampler~.c $
 //	$date: 28/10/2018 $
+//	$author: Martin Fouilleul $
 //	$revision: $
 //
 //*****************************************************************
@@ -292,7 +293,7 @@ void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 	}
 }
 
-void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float c0, float c1, float c2, float c3, float fnote)
+void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float fnote, float c0, float c1, float c2, float c3)
 {
 	int note = (int)floorf(fnote);
 	for(int i=0; i<VOICE_COUNT; i++)
