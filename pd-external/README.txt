@@ -23,18 +23,26 @@ export FFTW_DIR=/path/to/fftw
 export TORCH_DIR=/path/to/libtorch
 ./build
 
+Additionally if you have an Nvidia GPU on Linux, and if you are brave and fearless, you can install the CUDA toolkit, cuDNN and CUDA drivers, and download the CUDA version of libtorch, then
+
+export FFTW_DIR=/path/to/fftw
+export TORCH_DIR=/path/to/libtorch
+export CUDNN_DIR=/path/to/cudnn
+export CUDA=true
+./build
+
 
 Running
 -------
 
-The external is bundled with its dependencies in the vae_sampler directory. Add this directory to Pd's search path to use the external. You can also cd in vae_sampler and open the testbed.pd patch to check that the external can be loaded by Pd.
+The external is bundled with its dependencies in the vae_sampler directory. Add this directory to Pd's search path to use the external.
 
 Caveats
 -------
 
 With the macOS version of libtorch, you have to manually add libiomp and libmkml to the libtorch/lib folder. These can be found here : https://github.com/intel/mkl-dnn/releases
 
-The test patches use various externals that may not be present in your pd distribution (eg. pd vanilla). Install the cyclone library to get the full functionality.
+The test patches use various externals that may not be present in your pd distribution (eg. pd vanilla). Install the cyclone, iem, gem and zexy libraries to get the full functionality.
 
 Tested on
 ---------
