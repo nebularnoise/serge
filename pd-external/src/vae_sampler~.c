@@ -1,11 +1,10 @@
-//*****************************************************************
-//
-//	$file: vae_sampler~.c $
-//	$date: 28/10/2018 $
-//	$author: Martin Fouilleul $
-//	$revision: $
-//
-//*****************************************************************
+/*************************************************************//**
+*
+*	@file	vae_sampler~.c
+*	@date	28/10/2018
+*	@author Martin Fouilleul
+*
+*****************************************************************/
 #include<stdlib.h>	// malloc
 #include<string.h>	// memset
 #include<math.h>	// M_PI, cos, ...
@@ -111,6 +110,11 @@ static	t_class* vae_sampler_class;
 // worker threads
 //-----------------------------------------------------------------
 
+/**
+	@brief Worker thread entry point
+	@param x The address of a worker_object struct which contains the settings for the worker thread.
+	@return 0
+*/
 void* StreamVoiceSamples(void* x)
 {
 	worker_object* object = (worker_object*)x;
@@ -215,6 +219,11 @@ void* StreamVoiceSamples(void* x)
 // methods
 //-----------------------------------------------------------------
 
+/**
+	@brief Generate a Hann window
+	@param count size of the window.
+	@param windowOut Output buffer which will hold the window. Must be of size (count)
+*/
 void Hann(int count, float* windowOut)
 {
 	float invCount = 1./(count-1);
@@ -224,6 +233,11 @@ void Hann(int count, float* windowOut)
 	}
 }
 
+/**
+	@brief The external perform routine
+
+	This function reads the currently playing voices' buffers and mixes them to the external's outlet
+*/
 t_int* vae_sampler_perform(t_int* w)
 {
 	vae_sampler* x	= (vae_sampler*)w[1];
@@ -291,6 +305,11 @@ void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 	}
 }
 
+/**
+	@brief Allocate a voice and fires up its worker thread
+
+	This function first determines if the requested note is already playing. If not, it tries to allocate a voice for this note, and wakes up its associated worker thread.
+*/
 void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float fnote, float c0, float c1, float c2, float c3)
 {
 	int note = (int)floorf(fnote);

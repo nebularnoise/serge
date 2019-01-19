@@ -1,3 +1,10 @@
+/*************************************************************//**
+*
+*	@file	griffin_lim.test.cpp
+*	@date	07/01/2019
+*	@author Martin Fouilleul
+*
+*****************************************************************/
 #include<stdio.h>
 #include<math.h>
 #include<sndfile.h>

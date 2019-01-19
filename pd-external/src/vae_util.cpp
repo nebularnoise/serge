@@ -1,11 +1,10 @@
-//*****************************************************************
-//
-//	$file: vae_util.cpp $
-//	$date: 02/01/2019 $
-//	$author: Martin Fouilleul $
-//	$revision: $
-//
-//*****************************************************************
+/*************************************************************//**
+*
+*	@file	vae_util.cpp
+*	@date	02/01/2019
+*	@author Martin Fouilleul
+*
+*****************************************************************/
 #include<torch/script.h>
 #include<torch/csrc/api/include/torch/cuda.h>
 #include<assert.h>
@@ -29,6 +28,12 @@ typedef struct vae_model_t
 // vae_model wrapper functions
 //-----------------------------------------------------------------
 
+/**
+	@brief Test if CUDA is available
+
+	@param model The VAE model to test
+	@return 1 if the VAE model has CUDA capability, 0 otherwise
+*/
 extern "C" int VaeModelHasCuda(vae_model* model)
 {
 	if(!model)
@@ -41,6 +46,10 @@ extern "C" int VaeModelHasCuda(vae_model* model)
 	}
 }
 
+/**
+	@brief Create a VAE model
+	@return The newly created model.
+*/
 extern "C" vae_model* VaeModelCreate()
 {
 	vae_model* model = new vae_model;
@@ -71,12 +80,21 @@ extern "C" vae_model* VaeModelCreate()
 	return(model);
 }
 
+/**
+	@brief Destroys a VAE model
+	@param model The model to destroy
+*/
 extern "C" void VaeModelDestroy(vae_model* model)
 {
 	model->module.reset();
 	delete model;
 }
 
+/**
+	@brief Load a module from a serialized torchscript file
+	@param path Path to the serialized torchscript module
+	@return 0 if the module was loaded, -1 otherwise
+*/
 extern "C" int VaeModelLoad(vae_model* model, const char* path)
 {
 	model->module.reset();
@@ -96,6 +114,19 @@ extern "C" int VaeModelLoad(vae_model* model, const char* path)
 
 #define clamp(x, low, hi) ((x) > (hi)) ? (hi) : (((x)<(low))? (low) : (x))
 
+/**
+	@brief Get a spectrogram from a VAE model
+
+	@param count The size of the output buffer
+	@param buffer An output buffer which will hold the spectrogram
+	@param c0	First coordinate in latent space
+	@param c1	Second coordinate in latent space
+	@param c2	Third coordinate in latent space
+	@param c3	Fourth coordinate in latent space
+	@param note	Requested MIDI note
+
+	@return VAE_MODEL_OK if no error occured.
+*/
 extern "C" int VaeModelGetSpectrogram(vae_model* model, unsigned int count, float* buffer, float c0, float c1, float c2, float c3, int note)
 {
 	if(model->module)

@@ -1,17 +1,28 @@
-//*****************************************************************
-//
-//	$file: griffin_lim.cpp $
-//	$date: 07/01/2019 $
-//	$author: Martin Fouilleul $
-//	$revision: $
-//
-//*****************************************************************
+/*************************************************************//**
+*
+*	@file	griffin_lim.cpp
+*	@date	07/01/2019
+*	@author Martin Fouilleul
+*
+*****************************************************************/
 #include<math.h>
 #include<stdlib.h>
 #include<string.h>
 #include<assert.h>
 #include"fftw3.h"
 
+/**
+	@brief Short-Term Fourier Transform
+
+	@param plan The FFTW plan used to compute Fast Fourier Transforms
+	@param fftSize Logical size of the DFT
+	@param hopSize Hop size between two consecutive time slices
+	@param sliceCount Number of slices in the STFT
+	@param window Analysis window, of size (fftSize)
+	@param signalIn Input signal, of size ((sliceCount-1)*hopSize + fftSize)
+	@param spectrogramOut Output spectrogram, of size (sliceCount*(fftSize/2 + 1))
+	@param fftScratchBuffer Work buffer used by the FFTW functions, of size (fftSize)
+*/
 void GriffinLimSTFT(fftwf_plan plan,
 		    int fftSize,
 		    int hopSize,
@@ -38,6 +49,19 @@ void GriffinLimSTFT(fftwf_plan plan,
 		start += hopSize;
 	}
 }
+
+/**
+	@brief Inverse Short-Term Fourier Transform
+
+	@param plan The FFTW plan used to compute Inverse Fast Fourier Transforms
+	@param fftSize Logical size of the DFT
+	@param hopSize Hop size between two consecutive time slices
+	@param sliceCount Number of slices in the STFT
+	@param window Analysis window, of size (fftSize)
+	@param spectrogramIn Output spectrogram, of size (sliceCount*(fftSize/2 + 1))
+	@param signalOut Input signal, of size ((sliceCount-1)*hopSize + fftSize)
+	@param fftScratchBuffer Work buffer used by the FFTW functions, of size (fftSize)
+*/
 
 void GriffinLimISTFT(fftwf_plan plan,
 		     int fftSize,
@@ -72,6 +96,20 @@ void GriffinLimISTFT(fftwf_plan plan,
 	}
 }
 
+/**
+	@brief Implements the Griffin-Lim algorithm for reconstructing a signal from a magnitude spectrogram.
+
+	@param iterCount	The number of iterations of the algorithm
+	@param fftSize		The logical size of the DFT, which is also the size of the window
+	@param hopSize		Number of samples between to consecutive DFT slices
+	@param sliceCount	Number of DFT slices in the spectrogram
+	@param window		The window function, of size (fftSize)
+	@param windowGain	The gain resulting from overlap-adding the squared window (this is used for gain compensation)
+	@param magSpectrogram	The input magnitude spectrogram, of dimension (sliceCount , (fftSize/2+1)). The rows are the DFT slices, the columns are the (fftSize/2+1) DFT bins of a real valued signal.
+	@param signal		The output estimated signal, of size ((sliceCount-1)*hopSize + fftSize)
+
+*/
+
 extern "C" void GriffinLimReconstruct(int iterCount,
 				      int fftSize,
 				      int hopSize,
@@ -81,20 +119,6 @@ extern "C" void GriffinLimReconstruct(int iterCount,
 				      float* magSpectrogram,
 				      float* signal)
 {
-	/*NOTE(martin)
-		Implements the Griffin-Lim algorithm for reconstructing a signal from a magnitude spectrogram.
-
-		iterCount :	The number of iterations of the algorithm
-		fftSize :	The logical size of the DFT, which is also the size of the window
-		hopSize :	Number of samples between to consecutive DFT slices
-		sliceCount :	Number of DFT slices in the spectrogram
-		window :	The window function, of size (fftSize)
-		windowGain :	The gain resulting from overlap-adding the squared window (this is used for gain compensation)
-		magSpectrogram : The input magnitude spectrogram, of dimension (sliceCount , (fftSize/2+1)). The rows are the DFT slices,
-				  the columns are the (fftSize/2+1) DFT bins of a real valued signal.
-		signal :	The output estimated signal, of size ((sliceCount-1)*hopSize + fftSize)
-
-	*/
 	int sampleCount = (sliceCount - 1) * hopSize + fftSize;
 
 	fftwf_complex* spectrogramEstimate = (fftwf_complex*)fftwf_malloc((fftSize/2+1) * sliceCount * sizeof(fftwf_complex));

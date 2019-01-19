@@ -24,5 +24,7 @@ bin/*
 *.patch
 */fftw*
 *.eps
-*/vae_sample*
+*/vae_sampler*
 *.torchscript
+*doc/html*
+*doc/latex*
