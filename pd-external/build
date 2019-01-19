@@ -99,18 +99,18 @@ OBJECTS="$BUILD_DIR/vae_sampler~.o $BUILD_DIR/vae_util.o $BUILD_DIR/griffin_lim.
 
 if [ $OS = "Darwin" ] ; then
 	CUDA=false;
-	LFLAGS="-undefined dynamic_lookup -L$TORCH_DIR/lib -ltorch -lcaffe2 -lc10 -L./fftw/.libs -lfftw3f -lpthread"
+	LFLAGS="-undefined dynamic_lookup -L$TORCH_DIR/lib -ltorch -lcaffe2 -lc10 $FFTW_DIR/.libs/libfftw3f.a -lpthread"
 
 elif [ $OS = "Linux" ] ; then
 
 	if [ "$CUDA" = true ] ; then
 		CFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -DUSE_CUDA $CFLAGS"
 		CPPFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 -DUSE_CUDA $CPPFLAGS"
-		LFLAGS="-fPIC -Wl,-rpath,\$ORIGIN/lib -L$TORCH_DIR/lib -L/usr/lib/x86_64-linux-gnu/ -L$CUDNN_DIR/lib64 -ltorch -lcuda -lnvrtc -lnvToolsExt -Wl,-Bstatic -lcudart_static -Wl,-Bdynamic -lpthread -ldl -lrt -lcaffe2 -lcaffe2_gpu -lc10_cuda -lc10 -lcufft -lcurand -lcudnn -lculibos -lcublas -lcublas_device -lcudart_static -L$FFTW_DIR/.libs -lfftw3f -lpthread -ldl -lrt"
+		LFLAGS="-fPIC -Wl,-rpath,\$ORIGIN/lib -L$TORCH_DIR/lib -L/usr/lib/x86_64-linux-gnu/ -L$CUDNN_DIR/lib64 -ltorch -lcuda -lnvrtc -lnvToolsExt -Wl,-Bstatic -lcudart_static -Wl,-Bdynamic -lpthread -ldl -lrt -lcaffe2 -lcaffe2_gpu -lc10_cuda -lc10 -lcufft -lcurand -lcudnn -lculibos -lcublas -lcublas_device -lcudart_static $FFTW_DIR/.libs/libfftw3f.a -lpthread -ldl -lrt"
 	else
 		CFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 $CFLAGS"
 		CPPFLAGS="-fPIC -D_GLIBCXX_USE_CXX11_ABI=0 $CPPFLAGS"
-		LFLAGS="-fPIC -Wl,-rpath,\$ORIGIN/lib -L$TORCH_DIR/lib -ltorch -lcaffe2 -lc10 -L$FFTW_DIR/.libs -lfftw3f -lpthread"
+		LFLAGS="-fPIC -Wl,-rpath,\$ORIGIN/lib -L$TORCH_DIR/lib -ltorch -lcaffe2 -lc10 $FFTW_DIR/.libs/libfftw3f.a -lpthread"
 	fi
 fi
 
@@ -150,10 +150,18 @@ fi
 
 echo "Bundle the external with its dependencies..."
 
-cp "$TORCH_DIR"/lib/* "$BUILD_DIR"/lib
+rm -r "$BUILD_DIR"/lib/*
 
 if [ "$CUDA" = true ] ; then
+	cp "$TORCH_DIR"/lib/* "$BUILD_DIR"/lib
 	cp "$CUDNN_DIR"/lib64/* "$BUILD_DIR"/lib
-fi ;
+else
+	cp "$TORCH_DIR"/lib/libtorch.1.dylib "$BUILD_DIR"/lib
+	cp "$TORCH_DIR"/lib/libcaffe2.dylib "$BUILD_DIR"/lib
+	cp "$TORCH_DIR"/lib/libc10.dylib "$BUILD_DIR"/lib
+	cp "$TORCH_DIR"/lib/libmklml.dylib "$BUILD_DIR"/lib
+	cp "$TORCH_DIR"/lib/libiomp5.dylib "$BUILD_DIR"/lib
+	cp "$TORCH_DIR"/lib/libmkldnn.0.dylib "$BUILD_DIR"/lib
+fi
 
 rm "$BUILD_DIR"/*.o
