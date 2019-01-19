@@ -154,8 +154,17 @@ echo "Bundle the external with its dependencies..."
 if [ $OS = Linux ] ; then
 
 	if [ "$CUDA" = true ] ; then
-		cp "$CUDNN_DIR"/lib64/* "$BUILD_DIR"/lib
-		cp "$TORCH_DIR"/lib/* "$BUILD_DIR"/lib
+		cp /usr/lib/x86_64-linux-gnu/libcuda.so.1 "$BUILD_DIR"/lib
+		cp /usr/lib/x86_64-linux-gnu/libnvidia-fatbinaryloader.so.390.87 "$BUILD_DIR"/lib
+		cp "$TORCH_DIR"/lib/libtorch.so.1 "$BUILD_DIR"/lib
+		cp "$TORCH_DIR"/lib/libcaffe2.so "$BUILD_DIR"/lib
+		cp "$TORCH_DIR"/lib/libc10.so "$BUILD_DIR"/lib
+		cp "$TORCH_DIR"/lib/libnvToolsExt-3965bdd0.so.1 "$BUILD_DIR"/lib
+		cp "$TORCH_DIR"/lib/libcaffe2_gpu.so "$BUILD_DIR"/lib
+		cp "$TORCH_DIR"/lib/libmkldnn.so.0 "$BUILD_DIR"/lib
+		cp "$TORCH_DIR"/lib/libcudart-f7fdd8d7.so.9.0 "$BUILD_DIR"/lib
+		cp "$TORCH_DIR"/lib/libgomp-7bcb08ae.so.1 "$BUILD_DIR"/lib
+		cp "$TORCH_DIR"/lib/libc10_cuda.so "$BUILD_DIR"/lib
 	else
 		cp "$TORCH_DIR"/lib/libtorch.so.1 "$BUILD_DIR"/lib
 		cp "$TORCH_DIR"/lib/libcaffe2.so "$BUILD_DIR"/lib
