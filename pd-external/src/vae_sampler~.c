@@ -9,6 +9,7 @@
 #include<stdlib.h>	// malloc
 #include<string.h>	// memset
 #include<math.h>	// M_PI, cos, ...
+#include<stdio.h>	// printf
 #include<pthread.h>
 #include"m_pd.h"
 #include"profile.h"
@@ -23,7 +24,6 @@
 //		whereas printf is required to be thread safe by POSIX
 
 #ifdef DEBUG
-	#include<stdio.h>
 	#define DEBUG_POST(s, ...) post(s, ##__VA_ARGS__)
 	#define DEBUG_PRINTF(s, ...) printf(s, ##__VA_ARGS__)
 #else
@@ -39,7 +39,7 @@
 //-----------------------------------------------------------------
 
 //TODO(martin): would be much safer with const int (esp. with respect to parenthesing)
-//		but gcc on linux seems to fail when instancing buffers with const length...??
+//		but gcc on linux seems to fail when instancing buffers with constants declared in global scope...??
 
 #ifdef DEBUG
 #define GRIFFIN_LIM_ITERATION_COUNT 40
@@ -111,10 +111,7 @@ static	t_class* vae_sampler_class;
 // worker threads
 //-----------------------------------------------------------------
 
-#include<stdio.h>
-#include<assert.h>
-
-void* StreamGriffinLim(void* x)
+void* StreamVoiceSamples(void* x)
 {
 	worker_object* object = (worker_object*)x;
 	vae_sampler* sampler = object->sampler;
@@ -131,7 +128,8 @@ void* StreamGriffinLim(void* x)
 	pthread_mutex_init(&mutex, 0);	//TODO(martin): where do we destroy this mutex if indeed we need to ?
 	pthread_mutex_lock(&mutex);
 
-	//TODO(martin): eventually, set an exit condition, unlock the mutexes and join the threads uppon exit
+	//TODO(martin): eventually, set an exit condition, unlock the mutexes and join the threads uppon exit,
+	//		it's cleaner than cancelling in the main thread
 	while(1)
 	{
 		//NOTE(martin): wait for our voice to be allocated and guard against spurious wakeups
@@ -144,6 +142,7 @@ void* StreamGriffinLim(void* x)
 
 		memset(samplesBuffer, 0, SAMPLE_BUFFER_SIZE*sizeof(float));
 
+		//NOTE(martin): get the spectrogram from our model
 		int err = 0;
 		TIME_BLOCK_START();
 		err = VaeModelGetSpectrogram(sampler->model, MODEL_SPECTROGRAM_SIZE, spectrogram, voice->c0, voice->c1, voice->c2, voice->c3, voice->note);
@@ -227,7 +226,7 @@ void Hann(int count, float* windowOut)
 
 t_int* vae_sampler_perform(t_int* w)
 {
-	vae_sampler* x		= (vae_sampler*)w[1];
+	vae_sampler* x	= (vae_sampler*)w[1];
 	t_sample* out	= (t_sample*)w[2];
 	int n		= (int)w[3];
 
@@ -272,7 +271,6 @@ t_int* vae_sampler_perform(t_int* w)
 			}
 		}
 	}
-
 	return(w+4);
 }
 
@@ -296,6 +294,8 @@ void vae_sampler_load(vae_sampler* x, t_symbol* sym)
 void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float fnote, float c0, float c1, float c2, float c3)
 {
 	int note = (int)floorf(fnote);
+
+	//NOTE(martin): check if this note is already allocated
 	for(int i=0; i<VOICE_COUNT; i++)
 	{
 		if(x->voices[i].note == note)
@@ -306,12 +306,13 @@ void vae_sampler_fire(vae_sampler* x, t_symbol* sym, float fnote, float c0, floa
 		}
 	}
 
-
 	int voiceIndex = x->nextVoice;
 	poly_voice* voice = &(x->voices[voiceIndex]);
 
 	if(!voice->note)
 	{
+		//NOTE(martin): allocate the voice and wakeup worker thread
+
 		DEBUG_POST("Play (%f %f %f %f), note %i", c0, c1, c2, c3, note);
 
 		x->nextVoice++;
@@ -363,7 +364,7 @@ void* vae_sampler_new()
 		x->workerObjects[i].sampler = x;
 
 		pthread_cond_init(&(x->voices[i].condition), 0);
-		pthread_create(&(x->workers[i]), 0, StreamGriffinLim, &(x->workerObjects[i]));
+		pthread_create(&(x->workers[i]), 0, StreamVoiceSamples, &(x->workerObjects[i]));
 	}
 
 	return((void*)x);
