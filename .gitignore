@@ -17,13 +17,13 @@ notebooks/.ipynb_checkpoints/
 *_i386
 */build/
 *.tar
-*.png
+notebooks/*.png
 *.pth
 bin/*
 */libtorch/
 *.patch
 */fftw*
-*.eps
+notebooks/*.eps
 */vae_sampler*
 *.torchscript
 *doc/html*
