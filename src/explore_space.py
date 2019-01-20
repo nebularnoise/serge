@@ -55,7 +55,7 @@ with mido.open_input(key) as inport:
                     S = model(x,o,s).detach().cpu().numpy().T
                 #print(int(1000*(time()-rt)))
                 #rt = time()
-		sig = gl.griffin_lim_recontruct(args.gl_iteration, S, window, 3, 256)
+                sig = gl.griffin_lim_recontruct(args.gl_iteration, S, window, 3, 256)
                 if args.reverb:
                     sig = fftconvolve(sig, ri)
 
