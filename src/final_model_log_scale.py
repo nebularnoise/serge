@@ -141,9 +141,21 @@ class AudioDataset(data.Dataset):
         return S
 
 class MtoF(nn.Module):
-    def __init__(self):
+    """Simple module performing a mel to lin spectrogram transform
+
+    Parameters
+    ----------
+
+    fs: int
+        Sampling rate
+    nfft: int
+        size of fourier transform
+    nmels: int
+        number of mel bin
+    """
+    def __init__(self, fs=22050, nfft=2048, nmels=500):
         super(MtoF, self).__init__()
-        self.mel = torch.zeros([2048,500])
+        self.mel = nn.Parameter(torch.from_numpy(li.filters.mel(fs, nfft, n_mels=nmels).T).float())
     def forward(self, inp):
         return torch.mm(self.mel, inp)
 
@@ -172,9 +184,7 @@ class WAE(nn.Module):
     def __init__(self, zdim, n_trames):
         super(WAE,self).__init__()
 
-        self.mel = MtoF()
-
-        self.mel.mtof = torch.from_numpy(li.filters.mel(22050, 2048, n_mels=500).T).float()
+        self.mel_to_lin = MtoF()
 
         size = [1, 16, 32, 64, 128, 256]
 
@@ -287,7 +297,7 @@ class WAE(nn.Module):
         mel_specto, logvar = self.decode(inp, oct, semitone)
         mel_specto = torch.exp(mel_specto + 1) - 1
         mel_specto /= torch.max(abs(mel_specto))
-        return self.mel(mel_specto)
+        return self.mel_to_lin(mel_specto.squeeze(0))
 
     def forward(self,inp, oct, semitone):
         return self.decode(self.encode(inp)[2], oct, semitone)
