@@ -28,3 +28,4 @@ notebooks/*.eps
 *.torchscript
 *doc/html*
 *doc/latex*
+.atom*
