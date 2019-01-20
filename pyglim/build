@@ -1,0 +1,44 @@
+#!/bin/bash
+
+OS=$(uname -s)
+
+if [ $OS = "Darwin" ] ; then
+	SUFFIX=.dylib
+	echo "Building for macOS"
+elif [ $OS = "Linux" ] ; then
+	SUFFIX=.so
+	echo "Building for Linux"
+else
+	echo "Unsupported OS $OS"
+	exit -1
+fi
+
+PROJECT=libglim
+PRODUCT_NAME=$PROJECT$SUFFIX
+PRODUCT_DIR=lib
+
+
+if [ ! -d $PRODUCT_DIR ] ; then
+	mkdir $PRODUCT_DIR
+fi
+
+if [ -z "$FFTW_DIR" ] ; then
+	if [ -d ./fftw ] ; then
+		FFTW_DIR=./fftw
+	else
+		echo "Can't find fftw directory, please set variable FFTW_DIR to the fftw directory path"
+		exit -1
+	fi
+fi
+
+CPP=clang++
+SRC="src/griffin_lim.cpp"
+INCLUDE="-I$FFTW_DIR/api"
+LIBS="$FFTW_DIR/.libs/libfftw3f.a $FFTW_DIR/.libs/libfftw3.a"
+FLAGS="-Wno-macro-redefined"
+
+echo "Compiling CPP files..."
+
+$CPP -shared -o $PRODUCT_DIR/$PRODUCT_NAME $FLAGS $INCLUDE $LIBS $SRC
+
+echo "OK"
