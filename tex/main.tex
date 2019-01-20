@@ -24,7 +24,7 @@
 \usetikzlibrary{shapes,arrows,positioning,calc}
 \tikzset{
 block/.style = {draw, fill=white, rectangle, minimum height=3em, minimum width=3em},
-tmp/.style  = {coordinate}, 
+tmp/.style  = {coordinate},
 sum/.style= {draw, fill=white, circle, node distance=1cm},
 input/.style = {coordinate},
 output/.style= {coordinate},
@@ -60,15 +60,15 @@ pinstyle/.style = {pin edge={to-,thin,black}
   numberstyle=\tiny\color{codegray},
   stringstyle=\color{codepurple},
   basicstyle=\footnotesize,
-  breakatwhitespace=false,         
-  breaklines=true,                 
-  captionpos=b,                    
-  keepspaces=true,                 
-  numbers=left,                    
-  numbersep=5pt,                  
-  showspaces=false,                
+  breakatwhitespace=false,
+  breaklines=true,
+  captionpos=b,
+  keepspaces=true,
+  numbers=left,
+  numbersep=5pt,
+  showspaces=false,
   showstringspaces=false,
-  showtabs=false,                  
+  showtabs=false,
   tabsize=2
 }
 
@@ -95,7 +95,7 @@ IRCAM ATIAM - \@date\\
 \vspace*{0.4in}
 \begin{large}
 LATENT SPACE ORGANISATION OF \\
-SOUND EFFECTS WITH AUTOENCODERS\\
+SOUNDS WITH VARIATIONAL AUTOENCODERS\\
 \end{large}
 
 \vspace*{0.3in}
@@ -111,7 +111,8 @@ Geoffroy, Thibault \\
 \begin{large}
 Supervised by: \\
 Adrien Bitton \\
-(Philippe Esling) \\
+\& \\
+Philippe Esling \\
 \end{large}
 \vspace*{0.3in}
 \includegraphics[width=2cm]{img/atiam.png}
@@ -129,12 +130,11 @@ This project aimed to observe the organisation of sounds encoded in the latent s
 
 In this paper, we will firstly detail the preliminary work we performed prior to the designing of our architecture, then we will go on and present \textit{Ukulelatent}, the first system we designed, and finally we will present an idea for a second system, to be implemented in the future.
 All the code relevant to this project is available at this address: \href{https://github.com/nebularnoise/serge}{https://github.com/nebularnoise/serge}.
-%which had to be shut down due to a lack of time.
 
 \section{Preliminary work}
 \subsection{Auto-encoders, Variational auto-encoders, Regularization}
 
-An auto-encoder is a type of artificial neural network where two applications named \textit{encoder} ($\mathcal Q$) and \textit{decoder} ($\mathcal G$) are defined as: $\mathcal Q: x \longrightarrow h \in \mathbb H$, and $\mathcal G: h \in \mathbb H \longrightarrow r$, with $\mathbb H$ the latent space and $r$ the reconstruction of $x$, with hopefully $r \approx x$.
+An auto-encoder is a type of artificial neural network where two applications named \textit{encoder} ($\mathcal Q$) and \textit{decoder} ($\mathcal G$) are defined as: $\mathcal Q: x \longrightarrow z \in \mathbb Z$, and $\mathcal G: z \in \mathbb Z \longrightarrow r$, with $\mathbb Z$ the latent space and $r$ the reconstruction of $x$, with hopefully $r \approx x$.
 
 \begin{figure}[!h]
     \centering
@@ -148,7 +148,7 @@ Classical auto-encoders can be very powerful in terms of reconstruction, at the 
 Let $\mathcal Q: x \longrightarrow (\mu, \sigma)$ be an application encoding an input $x$ into a pair of latent variables $(\mu, \sigma)$, called a \textit{stochastic} encoder. We can then sample the distribution $\mathcal N(\mu, \sigma)$ to get our latent variable $h$. The whole point of having a stochastic encoder is to force it to \textit{generalize} by regularizing the latent space. Classical VAEs define a loss based on the KL divergence between the encoder's output and a prior distribution\footnote{\label{foot:appendix}More detail in appendix \ref{sec:appendix}}. The encoder's output is then forced to look like this prior; the choice of a good prior is thus extremely important to have satisfying results.\newline
 
 In our case, we use a slightly different way to regularize our latent space. Instead of forcing $(\mu, \sigma)$ to correspond to our prior, we consider the whole encoder's output $\mathcal Q(\underline x)$ given a batch of inputs $\underline x$, and compute the discrepancy between this output and a prior, via the \textit{Maximum Mean Discrepancy} method \footref{foot:appendix}. This method requires us to choose between different kernels in order to estimate this discrepancy (RBF, IMQ).
- 
+
 \subsection{Divergence Benchmark}
 The aim of this part is to compare the efficiency of different divergence functions, namely:
 \begin{enumerate}[noitemsep]
@@ -204,7 +204,7 @@ In order to get used to the AE, VAE and WAE, we played with the \textbf{MNIST} d
     \caption{Reconstruction on a non regularized auto-encoder}
 \end{figure}
 
-We then implemented both a variational auto-encoder(VAE) and Wasserstein auto-encoder(WAE), which yielded much better latent space organization (see Figure \ref{fig:latentspaceorg}). 
+We then implemented both a variational auto-encoder(VAE) and Wasserstein auto-encoder(WAE), which yielded much better latent space organization (see Figure \ref{fig:latentspaceorg}).
 While the VAE's reconstructions were much blurrier than the AE's, the WAE's latent space had a good structure, and still produced satisfying results.
 
 \begin{figure}[h!]
@@ -226,20 +226,20 @@ While the VAE's reconstructions were much blurrier than the AE's, the WAE's late
     \end{subfigure}
     }}
     \caption{2D latent space structural differences for an AE, VAE and WAE trained on the same MNIST dataset}\label{fig:latentspaceorg}
-    
+
 \end{figure}
 
 \newpage
 
 \section{Ukulelatent: a latent ukulele sampler}
 
-In this project we use regularized auto-encoders in order to reconstruct audio spectrograms from a latent space. Given a spectrogram $S$, we are learning two applications $\mathcal Q$ and $\mathcal G$ such as 
+In this project we use regularized auto-encoders in order to reconstruct audio spectrograms from a latent space. Given a spectrogram $S$, we are learning two applications $\mathcal Q$ and $\mathcal G$ such as
 
 \begin{align}
 S \approx \mathcal G(\mathcal(Q(S))).
 \label{S_expression}
 \end{align}
- 
+
 The final aim is to study how the latent space is organized, hence we need a way to actually explore and \textit{hear} this space. We decided to achieve this by embedding a pre-trained \textbf{PyTorch} model inside a \textbf{PureData} external, connected to a MIDI controller.\\
 
 This presents some challenges: we need to make our sampler \textit{real-time}, find a way to get audio from mel-spectrograms, and design a way to \textit{see} and \textit{control} our position inside the latent space intuitively.
@@ -276,32 +276,32 @@ At first we used deconvolutive layers in the decoder, to invert the convolutive 
 
 \subsubsection*{Losses}
 
-We define the following WAE objective in equation \eqref{WAE_objective} : 
+We define the following WAE objective in equation \eqref{WAE_objective} :
 \begin{align}
 \mathcal L_{\text{WAE}}(x, \hat x, z) = \text{MSE}(x,\hat x) + \alpha . \text{MMD}_\text{RBF}(z),
 \label{WAE_objective}
 \end{align}
 
-where $x, \hat x$ are the original and reconstructed mel-spectograms, $z = \mathcal Q(x)$, MSE the mean square error function, and $\text{MMD}_\text{RBF}$ an estimation of the maximum mean discrepancy between $z$ and a normal distribution using a standard normal kernel. We then train our model using an Adam optimizer, with an initial learning rate of $10^{-5}$ which we divide by two every $100$ epoch.
+where $x, \hat x$ are the original and reconstructed mel-spectograms, $z = \mathcal Q(x)$, MSE the mean square error function, and $\text{MMD}_\text{RBF}$ an estimation of the maximum mean discrepancy between $z$ and a normal distribution using a standard normal kernel (\cite{ref_MMD_1}, \cite{ref_MMD_2}). We then train our model using an Adam optimizer, with an initial learning rate of $10^{-5}$ which we divide by two every $100$ epoch.
 
 \subsubsection*{Signal reconstruction}
-We first tried to use an Multi-Scale Convolutional Neural Networks (MCNN) to reconstruct the signal from the magnitude spectrogram produced by our model. After having acknowledged the fact that we had not enough training data to produce good reconstruction, especially on data outside its train set, we settled for the classical Griffin-Lim algorithm\cite{griffin_lim}. 
+We first tried to use an Multi-Scale Convolutional Neural Networks (MCNN) to reconstruct the signal from the magnitude spectrogram produced by our model. After having acknowledged the fact that we had not enough training data to produce good reconstruction, especially on data outside its train set, we settled for the classical Griffin-Lim algorithm\cite{griffin_lim}.
 
 \subsubsection*{Supervising}
 
 While the latent space may be well organized, it is still unclear how to properly explore it. In order to finally get a sampler that we can play, we need to make the model map the audio samples to a certain midi note number. We first implemented a function estimating the fundamental frequency $f_0$ of a signal, following those steps:
-
+\newline
 \begin {enumerate}[noitemsep]
     \item Compute the biased auto-correlation estimator $R_{xx}$ of the input signal $x$
-    \item Define a minimum / maximum frequency range $[f_{\text{min}}, f_{\text{max}}]$ in which $f_0$ is included
-    \item Compute minimum / maximum period range $[\tau_{\text{min}} = f_e / f_{\text{max}}, \tau_{\text{max}} = f_e / f_{\text{min}}]$
+    \item Define a frequency range $[f_{\text{min}}, f_{\text{max}}]$ in which $f_0$ is included
+    \item Compute the corresponding period range $[\tau_{\text{min}} = f_e / f_{\text{max}}, \tau_{\text{max}} = f_e / f_{\text{min}}]$
     \item Compute $\tau_0 = \text{argmax}(R_{xx}[\tau_{\text{min}}:\tau_{\text{max}}]) + \tau_{\text{min}}$
     \item Yield $f_0 = f_e / \tau_0$.
 \end{enumerate}
 
 This fundamental frequency method is quite cheap to compute and robust in term of identification, thus it is added to the audio dataset pre-processing pass.\newline
 
-Next, we need to tell the model what is the fundamental frequency of the audio sample, which we tried to do in many different ways. 
+Next, we need to tell the model what is the fundamental frequency of the audio sample, which we tried to do in many different ways.
 
 At first we simply mapped the frequency to an extra dimension on both the encoder and decoder, hoping the system would see that there was a correlation between a vertical shift in the mel spectrogram and the given parameter. It failed by bypassing completely our parameter.
 
@@ -311,25 +311,32 @@ Finally, we tried to pass $f_0$ as two one-hot vectors, one of size 7 (giving th
 
 What is now interesting is to guess the purpose of the latent space's other dimensions given by the encoder, now that the pitch related information is manually encoded into two one-hots. We fixed the encoder's output dimension to 4, as we could explore it with two XY pads. By playing around with a midi keyboard, we estimated that mainly three hyper parameters are encoded in this 4-dimensional space:
 
-\begin{itemize}
+\begin{itemize}[noitemsep]
     \item Amount of low frequency in the spectrum
     \item Damping
     \item Metallic-ish sounding instrument.
 \end{itemize}
 
-This is actually an accurate way to organize things, as those are parts of the main differences between a motu and a guitar. Maybe a 4-dimensional space is overscaled for this dataset, and should be upscaled for more complex ones.
+This intuitively sounds like an accurate way to organize the dataset, as those are parts of the main differences between a motu and a guitar. Maybe a 4-dimensional space is overscaled for this dataset, and should be upscaled for more complex ones. Using the T-SNE algorithm, we are able to \textit{unfold} the latent space in order to visualise the inner separation between samples (see fgure \ref{fig:tsne}).
+
+\begin{figure}
+    \centering
+    \centerline{\includegraphics[width=1.3\linewidth]{img/tsne_latent_space_guitare_uku.eps}}
+    \caption{2D representation of the latent space via the T-SNE algorithm}
+    \label{fig:tsne}
+\end{figure}
 
 \subsection{Puredata external}
 
-In order to allow the real-time exploration of the latent space of our pre-trained model, we embedded our model inside a \texttt{Pd} external called \texttt{vae\_sampler\~}. It can then be integrated within a patch with an adapted GUI and MIDI control. 
+In order to allow the real-time exploration of the latent space of our pre-trained model, we embedded our model inside a \texttt{Pd} external called \texttt{vae\_sampler\~}. It can then be integrated within a patch with an adapted GUI and MIDI control.
 \paragraph{}
-The external has one inlet that can receive two messages : 
+The external has one inlet that can receive two messages :
 \begin{itemize}
-\item When receiving a \texttt{load} message with a file name as argument, the external loads the model from a file. 
-\item When receiving a \texttt{play} message with one int (corresponding to a MIDI note) and four floats (corresponding to coordinates in the latent space) as arguments, the external uses the loaded model to generate a spectrogram. It then reconstructs an audio signal from this spectrogram and outputs this signal from its audio outlet.  
+\item When receiving a \texttt{load} message with a file name as argument, the external loads the model from a file.
+\item When receiving a \texttt{play} message with one int (corresponding to a MIDI note) and four floats (corresponding to coordinates in the latent space) as arguments, the external uses the loaded model to generate a spectrogram. It then reconstructs an audio signal from this spectrogram and outputs this signal from its audio outlet.
 \end{itemize}
 
-\subsubsection{Wrapping \texttt{libtorch}} 
+\subsubsection{Wrapping \texttt{libtorch}}
 
 Using a \textbf{\texttt{PyTorch}} model from \textbf{\texttt{C++}} is made possible by leveraging the \textbf{\texttt{LibTorch}} API. The \textbf{\texttt{PyTorch}} model is first converted to \textbf{\texttt{TorchScript}} by tracing its \texttt{forward()} function with example data from the train-set, and serialized to a file. This file can then be loaded by a \textbf{\texttt{C++}} program linked to the \textbf{\texttt{LibTorch}} library. \newline
 The \texttt{vae\_sampler\~} external is coded in plain \textbf{\texttt{C}}, whereas \textbf{\texttt{LibTorch}} exposes a \textbf{\texttt{C++11}} API. Hence in order to use it in our external, we wrote a wrapper that is responsible for loading the model, calling its \texttt{forward()} function and converting back and forth \textbf{\texttt{LibTorch}} tensor types.
@@ -396,7 +403,7 @@ After wrapping the \textbf{PyTorch} model in a \textbf{PureData} external, we ma
 
 The resulting sampler gave satisfying results on a plucked string dataset, which was developed for the occasion.
 
-In an effort to diversify the dataset and explore the organisation of audio effects in the latent space, we set out to develop a new system, with a larger dataset, augmented by the use of DSP routines. While the groundwork was performed, the training has to be shut down due to a lack of time. Further work could allow for a second real-time sampler using this new DSP-augmented dataset.
+In an effort to diversify the dataset and explore the organisation of audio effects in the latent space, we set out to develop a new system, with a larger dataset, augmented by the use of DSP routines. While the groundwork was performed, the training had to be shut down due to a lack of time. Further work could allow for a second real-time sampler using this new DSP-augmented dataset.
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
@@ -406,24 +413,26 @@ In an effort to diversify the dataset and explore the organisation of audio effe
 \section{Divergences}
 \label{sec:appendix}
 
-\subsection{Kullback-Leibler Divergence} 
+\subsection{Kullback-Leibler Divergence}
 
 
-The Kullback–Leibler divergence (KLD) measure the difference between two probability distribution ( \cite{KL_1951}, \cite{K_1959} ). The KLD is also called Relative Entropy.
-If the two distributions are similar, the KLD will be equal to 0, and more the divergence increase, less the two distributions will be close. It divergence is defined as follows : 
+The Kullback–Leibler divergence (KLD) measure the difference between two probability distribution ( \cite{KL_1951}, \cite{K_1959} ).
+The more two distributions are similar, the closer the KLD will be to 0, and the further the distributions are, the more the divergence increases. The KLD is defined as follows :
 \begin{align}
 D_{KL}(P \: || \: Q) = \sum_i P(i) \ln \left( \frac{P(i)}{Q(i)} \right) ,
 \end{align}
 
 with P and Q two probability distributions of a discrete random variable.
-We can also see it like the average of the logarithmic difference between P and Q. However, the KLD is only defined if $P(i) > 0$, $Q(i) > 0 $ for any $i$, and P and Q both sum might be equal to 1. 
-A simplification in the formula is possible in the case of multivariate distributions. 
-Suppose that we have two multivariate normal distributions, with means 
-$\mu_p$ , $\mu_q$ and with (non-singular) covariance matrices $\Sigma_p$ and $\Sigma_q$. 
- If the two distributions have the same dimension, 
-$k$, then the KLD is : 
+We can also see it like the average of the logarithmic difference between P and Q.
 
-\begin{equation} 
+However, the KLD is only defined if $P(i) > 0$, $Q(i) > 0 $ for any $i$, and if P and Q both sum to 1.
+A simplification in the formula is possible in the case of multivariate distributions.
+Suppose that we have two multivariate normal distributions, with means
+$\mu_p$ , $\mu_q$ and with (non-singular) covariance matrices $\Sigma_p$ and $\Sigma_q$.
+ If the two distributions have the same dimension,
+$k$, then the KLD is :
+
+\begin{equation}
 D_{\text{KL}}({\mathcal {N}}_{p}\parallel {\mathcal {N}}_{q})={\frac {1}{2}}\left(\operatorname {tr} \left(\Sigma _{q}^{-1}\Sigma _{p}\right)+(\mu _{q}-\mu _{p})^{\mathsf {T}}\Sigma _{q}^{-1}(\mu _{q}-\mu _{p})-k+\ln \left({\frac {\det \Sigma _{p}}{\det \Sigma _{q}}}\right)\right).
 \end{equation}
 
@@ -436,7 +445,7 @@ In our case, we consider a dependence to $z$ the latent space, from P and Q. We 
 \end{align}
 
 
-Here, each latent space $z_j$ follows an independent variational factor, defined by $q_j(z_j)$. We have made the choice to use normal factors. Thus each dimension of the latent space will be governed by an independent normal distribution with its own mean and variance, and in the VAE this is especially $q_j(z_j) = \mathcal{N}( \mu_j (\textbf{x}), \Sigma_j(\textbf{x}))$, where the parameters depend on the input data. The KLD can be computed for our VAE like : 
+Here, each latent space $z_j$ follows an independent variational factor, defined by $q_j(z_j)$. We have made the choice to use normal factors. Thus each dimension of the latent space will be governed by an independent normal distribution with its own mean and variance, and in the VAE this is especially $q_j(z_j) = \mathcal{N}( \mu_j (\textbf{x}), \Sigma_j(\textbf{x}))$, where the parameters depend on the input data. The KLD can be computed for our VAE like :
 
 
 
@@ -455,11 +464,11 @@ D_{\text{KL}}\left[ \mathcal{N}(0,1) \: || \:  \mathcal{N}(\mu(\textbf{x}) , \si
 \end{split}
 \end{equation}
 
-where $\Sigma_q(x_k)$ and $\mu_q(x_k)$ are respectively the variance and the mean of the $k^{th}$ dimension of Q. 
-Here it is the line code we computed to measure the KLD in our VAE.  
+where $\Sigma_q(x_k)$ and $\mu_q(x_k)$ are respectively the variance and the mean of the $k^{th}$ dimension of Q.
+This is the formula we used to measure the KLD in our VAE.
 
 \subsection{Maximum Mean Discrepancy}
-To set the Hilbert Space, we consider a reproducing Kernel Hilbert Space $\mathcal{H}$ with kernel k. To evaluate the function f depending to the kernel k, we define : $f(x) = \langle {k(x,.),f} \rangle $ .\\
+To set the Hilbert Space, we consider a reproducing Kernel Hilbert Space $\mathcal{H}$ with kernel $k$ \cite{ref_MMD_1}. To evaluate the function $f$ depending to the kernel $k$, we define : $f(x) = \langle {k(x,.),f} \rangle $ .\\
 And computing means via linearity gives :
 
 \begin{align}
@@ -467,15 +476,15 @@ And computing means via linearity gives :
     &= \langle E_p[k(x,.)],f \rangle ,
 \end{align}
 
-where $Ep[f(x)]$ is the expected value of the function $f$. To define the expected value, we use the Monte-Caros method. It consist on generate samples randomly from a probability distribution \cite{monte_carlo_method}. 
-It is possible to represent the optimization problem as follows : 
+where $Ep[f(x)]$ is the expected value of the function $f$. To define the expected value, we use the Monte-Carlo method. It consist on generate samples randomly from a probability distribution \cite{monte_carlo_method}.
+It is possible to represent the optimization problem as follows :
 
 \begin{align}
     sup_{||f|| \leq 1} E_p[f(x)] - E_q[f(y)] &= sup_{||f|| \leq 1} \langle \mu_p -\mu_q , f \rangle \\
     &= ||\mu_q - \mu_q||_\mathcal{H}.
 \end{align}
 
-And if the expression is written in terms of expected values, we obtain :
+And if the expression is written in terms of expected values, we get :
 
 \begin{align}
 || \mu_p - \mu_q||^2_H  &= \langle \mu_p - \mu_q, \mu_p - \mu_q \rangle \\
@@ -483,19 +492,19 @@ And if the expression is written in terms of expected values, we obtain :
 \label{equ_mmd}
 \end{align}
 
-The variable $E_{i,j}$ is the expected value between two distribution $i$ and $j$. 
-The equation \ref{equ_mmd} express how to calculate the Maximum Mean Discrepancy. 
+The variable $E_{i,j}$ is the expected value between two distribution $i$ and $j$.
+The equation \ref{equ_mmd} express how to calculate the Maximum Mean Discrepancy.
 
-For a Radial Basic Function (RBF), or a Inverse Multi-Quadratic kernel (IMQ), the kernel $k$ for two sets of real values x and y is equals to : 
+For a Radial Basic Function (RBF), or a Inverse Multi-Quadratic kernel (IMQ) \cite{ref_MMD_2}, the kernel $k$ for two sets of real values x and y is equals to :
 
 \begin{align}
-\text{ MMD$_{\text{(RBF)}}$ :} \quad 
+\text{ MMD$_{\text{(RBF)}}$ :} \quad
     k_{\text{(RBF)}} = \exp \left( \frac{ ||x^2 + y^2||}{- 2 \Sigma^2} \right) \qquad; \qquad
 \text{MMD$_{\text{(IMQ)}}$ :} \quad
     k_{\text{(IMQ)}} = \frac{ 1 }{ \sqrt{ ||x^2 + y^2|| + c^2} }. \qquad
 \end{align}
- 
- where c is an adjustable constant. 
+
+ where c is an adjustable constant.
 \newpage
 \section{Repository organization}
 
@@ -516,7 +525,7 @@ The github repository has the following structure:\newline
 .3 refactor\_WAE.ipynb \DTcomment{Thibault Geoffroy / Antoine Caillon}.
 .2 pd-external.
 .3 README.txt \DTcomment{Martin Fouilleul}.
-.3 build \DTcomment{Martin Fouilleul}. 
+.3 build \DTcomment{Martin Fouilleul}.
 .3 patches.
 .4 *.pd \DTcomment{Martin Fouilleul}.
 .4 visu\_latent.pd \DTcomment{Antoine Caillon / Martin Fouilleul}.
@@ -541,7 +550,7 @@ The github repository has the following structure:\newline
 .3 *.py, *.ipynb \DTcomment{Antoine Caillon}.
 }
 \vspace{1cm}
-The \textbf{faust} directory contains the .dsp code describing the effects used to augment the second dataset. The \textbf{notebooks} directory is where the first AE - VAE - WAE experiments has been made. Inside \textbf{pd-external} is the source code for compiling the \textbf{PureData} external \textbf{vae\_sampler}, alongside some test patches. The \textbf{src} directory contains \textbf{final\_model\_log\_scale.py} which is the Python script that has been extensively used to train a WAE on spectrograms from our plucked strings dataset\footnote{Note that this dataset is available under \texttt{/u/atiam.1819/caillon/dev/serge/dataset/string.tar.gz}.}. The \textbf{explore\_space.py} loads a pretrained model and make you listen to it interactively.\newline
+The \textbf{faust} directory contains the .dsp code describing the effects used to augment the second dataset. The \textbf{notebooks} directory is where the first AE - VAE - WAE experiments were made. Inside \textbf{pd-external} is the source code for compiling the \textbf{PureData} external \textbf{vae\_sampler}, alongside some test patches. The \textbf{src} directory contains \textbf{final\_model\_log\_scale.py} which is the Python script that has been extensively used to train a WAE on spectrograms from our plucked strings dataset\footnote{Note that this dataset is available under \texttt{/u/atiam.1819/caillon/dev/serge/dataset/string.tar.gz}.}. The \textbf{explore\_space.py} loads a pretrained model and make you listen to it interactively.\newline
 
 The trained model used in the demo video is available here \href{https://drive.google.com/open?id=1OrNjFHJUFL2HTnGaC3N0mWOKMxsTD9ge}{WVAE\_500.torchscript}.
 
