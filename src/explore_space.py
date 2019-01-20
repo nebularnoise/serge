@@ -3,7 +3,7 @@ import argparse
 import mido
 import torch
 import sounddevice as sd
-from util import audio_utilities as au
+from pyglim import pyglim as gl
 import librosa as li
 from scipy.signal import fftconvolve
 import numpy as np
@@ -32,6 +32,7 @@ s = torch.zeros([1,12]).to(device)
 
 #ri,fs = li.load("ri.wav", sr=22050)
 fs = 22050
+window=np.hann(2048)
 
 with mido.open_input(key) as inport:
     print("Go!")
@@ -54,7 +55,7 @@ with mido.open_input(key) as inport:
                     S = model(x,o,s).detach().cpu().numpy().T
                 #print(int(1000*(time()-rt)))
                 #rt = time()
-                sig = au.reconstruct_signal_griffin_lim(S, 2048, 256, args.gl_iteration, verbose=False)
+		sig = gl.griffin_lim_recontruct(args.gl_iteration, S, window, 3, 256)
                 if args.reverb:
                     sig = fftconvolve(sig, ri)
 
