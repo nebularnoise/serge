@@ -6,10 +6,20 @@ Author : Martin Fouilleul
 
 """
 
+import os as os
+import platform
 import numpy as np
 import ctypes as C
 
-libglim = C.cdll.LoadLibrary('lib/libglim.dylib')
+package_directory = os.path.dirname(os.path.abspath(__file__))
+shared_lib = os.path.join(package_directory, 'lib', 'libglim')
+
+if platform.system() == 'Linux':
+	shared_lib = shared_lib + '.so'
+elif platform.system() == 'Darwin':
+	shared_lib = shared_lib + '.dylib'
+
+libglim = C.cdll.LoadLibrary(shared_lib)
 
 libglim.GriffinLimReconstruct.argtypes = (C.c_int, C.c_int, C.c_int, C.c_int, np.ctypeslib.ndpointer(
     dtype=np.float64), C.c_double, np.ctypeslib.ndpointer(dtype=np.float64), np.ctypeslib.ndpointer(dtype=np.float64))
