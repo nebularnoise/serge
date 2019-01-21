@@ -21,12 +21,15 @@ elif platform.system() == 'Darwin':
 
 libglim = C.cdll.LoadLibrary(shared_lib)
 
-libglim.GriffinLimReconstruct.argtypes = (C.c_int, C.c_int, C.c_int, C.c_int, np.ctypeslib.ndpointer(
-    dtype=np.float64), C.c_double, np.ctypeslib.ndpointer(dtype=np.float64), np.ctypeslib.ndpointer(dtype=np.float64))
+try:
+	libglim.GriffinLimReconstruct.argtypes = (C.c_int, C.c_int, C.c_int, C.c_int, np.ctypeslib.ndpointer(
+    	dtype=np.float64), C.c_double, np.ctypeslib.ndpointer(dtype=np.float64), np.ctypeslib.ndpointer(dtype=np.float64))
+
+except:
+	print("GL available in single precision only")
 
 libglim.GriffinLimReconstructFloat.argtypes = (C.c_int, C.c_int, C.c_int, C.c_int, np.ctypeslib.ndpointer(
-    dtype=np.float32), C.c_float, np.ctypeslib.ndpointer(dtype=np.float32), np.ctypeslib.ndpointer(dtype=np.float32))
-
+    	dtype=np.float32), C.c_float, np.ctypeslib.ndpointer(dtype=np.float32), np.ctypeslib.ndpointer(dtype=np.float32))
 
 def griffin_lim_reconstruct(iteration_count, spectrogram_mag, window, window_gain, hop_size):
     """Griffin-Lim Reconstruction
