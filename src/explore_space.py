@@ -7,7 +7,9 @@ from pyglim import pyglim as gl
 import librosa as li
 from scipy.signal import fftconvolve
 import numpy as np
+import matplotlib.pyplot as plt
 from time import time
+import soundfile as sf
 
 parser = argparse.ArgumentParser()
 parser.add_argument("model", type=str, help="TorchScript to load")
@@ -18,7 +20,7 @@ args = parser.parse_args()
 print("Ready...", end="", flush=True)
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
+#device = torch.device("cpu")
 
 model = torch.jit.load(args.model, map_location=device)
 
@@ -32,7 +34,7 @@ s = torch.zeros([1,12]).to(device)
 
 #ri,fs = li.load("ri.wav", sr=22050)
 fs = 22050
-window=np.hann(2048)
+window = np.hanning(2048)
 
 with mido.open_input(key) as inport:
     print("Go!")
@@ -52,17 +54,29 @@ with mido.open_input(key) as inport:
                 #print("audio generation...", end="")
                 #rt = time()
                 with torch.no_grad():
-                    S = model(x,o,s).detach().cpu().numpy().T
-                #print(int(1000*(time()-rt)))
-                #rt = time()
-                sig = gl.griffin_lim_recontruct(args.gl_iteration, S, window, 3, 256)
+                    S = 256*model(x,o,s).detach().cpu().numpy().T
+
+                # plt.figure(figsize=(10,5))
+                # plt.subplot(121)
+
+                S = np.ascontiguousarray(S)
+
+                sig = gl.griffin_lim_reconstruct_single_precision(args.gl_iteration, S, window, 3, 256)
+
                 if args.reverb:
                     sig = fftconvolve(sig, ri)
 
-                sig /= np.max(abs(sig))
+                # plt.imshow(S, aspect="auto", cmap="Greys")
+                # plt.title("Model output")
+                # plt.subplot(122)
+                # plt.imshow(abs(li.stft(sig)).T, aspect="auto", cmap="Greys")
+                # plt.title("PyGlim output")
+                # plt.show()
+                #sig /= np.max(abs(sig))
                 #print(int(1000*(time()-rt)))
                 #print("done! playing...")
                 sd.play(sig[3*fs//10:],22050)
+
         elif (msg.control-48<4):
             k = msg.control - 48
             v = 10*(msg.value/127-.5)
