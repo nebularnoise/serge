@@ -8,8 +8,10 @@ Dependencies
 ----------
 
 fftw can be downloaded with : wget http://www.fftw.org/fftw-3.3.8.tar.gz
-You should compile fftw with single precision support and position independant code : unzip the tarball, cd to the fftw directory, then
+You should compile fftw once with double precision and once with single precision support, and position independant code : unzip the tarball, cd to the fftw directory, then :
 
+./configure --with-pic
+make
 ./configure --enable-float --with-pic
 make
 
