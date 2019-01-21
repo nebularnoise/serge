@@ -59,8 +59,8 @@ def griffin_lim_reconstruct(iteration_count, spectrogram_mag, window, window_gai
     fft_size = len(window)
     slice_count = spectrogram_mag.shape[0]
 
-    spectrogram_buffer = np.asarray(spectrogram_mag, dtype=np.float64)
-    window_buffer = np.asarray(window, dtype=np.float64)
+    spectrogram_buffer = np.ascontiguousarray(spectrogram_mag, dtype=np.float64)
+    window_buffer = np.ascontiguousarray(window, dtype=np.float64)
     signal_buffer = np.empty(
         (slice_count - 1) * hop_size + fft_size, dtype=np.float64)
 
@@ -101,8 +101,8 @@ def griffin_lim_reconstruct_single_precision(iteration_count, spectrogram_mag, w
     fft_size = len(window)
     slice_count = spectrogram_mag.shape[0]
 
-    spectrogram_buffer = np.asarray(spectrogram_mag, dtype=np.float32)
-    window_buffer = np.asarray(window, dtype=np.float32)
+    spectrogram_buffer = np.ascontiguousarray(spectrogram_mag, dtype=np.float32)
+    window_buffer = np.ascontiguousarray(window, dtype=np.float32)
     signal_buffer = np.empty(
         (slice_count - 1) * hop_size + fft_size, dtype=np.float32)
 
